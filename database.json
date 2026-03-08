@@ -1,0 +1,75 @@
+{
+  "Card": {
+    "10101023": {
+      "User_ID": "",
+      "Balance": 0,
+      "Expiry_Date": "02-2027",
+      "is_Entry": false,
+      "Last_Entry_Time": ""
+    },
+    "10101024": {
+      "User_ID": "",
+      "Balance": 0,
+      "Expiry_Date": "09-2029",
+      "is_Entry": false,
+      "Last_Entry_Time": ""
+    },
+    "10101025": {
+      "User_ID": "",
+      "Balance": 0,
+      "Expiry_Date": "1-2030",
+      "is_Entry": false,
+      "Last_Entry_Time": ""
+    },
+    "10101026": {
+      "User_ID": "",
+      "Balance": 0,
+      "Expiry_Date": "12-2026",
+      "is_Entry": false,
+      "Last_Entry_Time": ""
+    },
+    "10101027": {
+      "User_ID": "",
+      "Balance": 0,
+      "Expiry_Date": "01-2029",
+      "is_Entry": false,
+      "Last_Entry_Time": ""
+    },
+    "11001100": {
+      "User_ID": "",
+      "Balance": 0,
+      "Expiry_Date": "01-2025",
+      "is_Entry": false,
+      "Last_Entry_Time": ""
+    }
+  },
+  "Parking_History": {
+    
+  },
+  "User": {
+    
+  },
+  "Parking_Zone": {
+    "ZA": {
+      "P1": {
+        "is_Occupied": false
+      },
+      "P2": {
+        "is_Occupied": false
+      },
+      "is_Open": true,
+      "Available_Parking": 2
+    },
+    "ZB": {
+      "P1": {
+        "is_Occupied": false
+      },
+      "P2": {
+        "is_Occupied": false
+      },
+      "is_Open": false,
+      "Available_Parking": 2
+    },
+    "Total_Available_Parking": 2
+  }
+}

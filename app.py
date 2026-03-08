@@ -1,0 +1,52 @@
+from flask import Flask, request, render_template, redirect, url_for, session
+from firebase_admin import db
+
+from authentication import auth_bp
+from rfid_module import rfid_bp
+from firebase_config import init_firebase
+from parking_logic import *
+
+# Initialize Flask and Firebase
+app = Flask(__name__)
+app.secret_key = "secretkey"
+init_firebase()
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(rfid_bp)
+
+@app.route('/')
+def home():
+    return redirect(url_for('auth.login'))
+
+@app.route('/topup', methods=['GET', 'POST'])
+def topup():
+    # If the user is not logged in, redirect them to the login page
+    if 'card_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    user_card_id = session['card_id']
+    card_ref = db.reference(f'Card/{user_card_id}')
+    
+    # Submit
+    if request.method == 'POST':
+        topup_amount = float(request.form.get('amount', 0.0))
+        
+        if topup_amount > 0:
+            # Fetch the current balance and add the new amount
+            current_balance = float(card_ref.get().get('Balance', 0.0))
+            new_balance = current_balance + topup_amount
+            
+            # Update the database
+            card_ref.update({'Balance': new_balance})
+            return redirect(url_for('topup', success=f"Successfully added RM {topup_amount:.2f}!"))
+
+    # Fetch the balance to display on the screen
+    current_balance = float(card_ref.get().get('Balance', 0.0))
+    
+    # Catch the success message from the URL (if it exists)
+    success_msg = request.args.get('success')
+    
+    return render_template('topup.html', balance=current_balance, card_id=user_card_id, success=success_msg)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
