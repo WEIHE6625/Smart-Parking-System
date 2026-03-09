@@ -1,75 +1,59 @@
 {
   "Card": {
-    "10101023": {
-      "User_ID": "",
+    "723AB402": {
       "Balance": 0,
-      "Expiry_Date": "02-2027",
-      "is_Entry": false,
-      "Last_Entry_Time": ""
-    },
-    "10101024": {
+      "Expiry_Date": "02-2025",
+      "Last_Entry_Time": "",
       "User_ID": "",
+      "is_Entry": false
+    },
+    "9A634305": {
       "Balance": 0,
-      "Expiry_Date": "09-2029",
-      "is_Entry": false,
-      "Last_Entry_Time": ""
-    },
-    "10101025": {
+      "Expiry_Date": "06-2027",
+      "Last_Entry_Time": "",
       "User_ID": "",
+      "is_Entry": false
+    },
+    "7AE1E400": {
       "Balance": 0,
-      "Expiry_Date": "1-2030",
-      "is_Entry": false,
-      "Last_Entry_Time": ""
-    },
-    "10101026": {
+      "Expiry_Date": "05-2029",
+      "Last_Entry_Time": "",
       "User_ID": "",
+      "is_Entry": false
+    },
+    "FEA602FA": {
       "Balance": 0,
       "Expiry_Date": "12-2026",
-      "is_Entry": false,
-      "Last_Entry_Time": ""
-    },
-    "10101027": {
+      "Last_Entry_Time": "",
       "User_ID": "",
-      "Balance": 0,
-      "Expiry_Date": "01-2029",
-      "is_Entry": false,
-      "Last_Entry_Time": ""
-    },
-    "11001100": {
-      "User_ID": "",
-      "Balance": 0,
-      "Expiry_Date": "01-2025",
-      "is_Entry": false,
-      "Last_Entry_Time": ""
+      "is_Entry": false
     }
   },
   "Parking_History": {
-    
-  },
-  "User": {
-    
   },
   "Parking_Zone": {
+    "Total_Available_Parking": 2,
     "ZA": {
+      "Available_Parking": 2,
       "P1": {
         "is_Occupied": false
       },
       "P2": {
         "is_Occupied": false
       },
-      "is_Open": true,
-      "Available_Parking": 2
+      "is_Open": true
     },
     "ZB": {
+      "Available_Parking": 2,
       "P1": {
         "is_Occupied": false
       },
       "P2": {
         "is_Occupied": false
       },
-      "is_Open": false,
-      "Available_Parking": 2
-    },
-    "Total_Available_Parking": 2
+      "is_Open": false
+    }
+  },
+  "User": {
   }
 }

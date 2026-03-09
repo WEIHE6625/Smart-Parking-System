@@ -10,7 +10,7 @@ rfid_bp = Blueprint('rfid', __name__)
 def rfid_entry():
     data = request.get_json()
     
-    if not data or 'rfid_uid' not in data:
+    if not data or 'rfid_uid' not in data or data['rfid_uid'].strip() == "":
         return jsonify({"status": "ERROR", "message": "No RFID provided"}), 400
 
     scanned_uid = data['rfid_uid']
@@ -45,7 +45,7 @@ def rfid_entry():
 def rfid_exit():
     data = request.get_json()
     
-    if not data or 'rfid_uid' not in data:
+    if not data or 'rfid_uid' not in data or data['rfid_uid'].strip() == "":
         return jsonify({"status": "ERROR", "message": "No RFID provided"}), 400
 
     scanned_uid = data['rfid_uid']
