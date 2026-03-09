@@ -78,6 +78,7 @@ void denied() {
   delay(300);
   digitalWrite(RED_LED, HIGH);
 
+  delay(100);
   digitalWrite(BUZZER, LOW);
 }
 

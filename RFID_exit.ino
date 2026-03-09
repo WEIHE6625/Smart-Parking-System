@@ -7,7 +7,7 @@ const char* wifi_ssid = "B100M";
 const char* wifi_password = "12345678";
 
 // Flask Server IP
-const char* serverName = "http://192.168.X.X:5000/rfid_exit"; 
+const char* serverName = "http://192.168.200.104:5000/rfid_exit"; 
 
 #define SS_PIN 5
 #define RST_PIN 21
@@ -24,7 +24,7 @@ void setup_wifi() {
     Serial.println("WiFi Connecting...");
     delay(500);
   }
-  Serial.println("WiFi Connected.")
+  Serial.println("WiFi Connected.");
 }
 
 void setup() {
@@ -139,11 +139,11 @@ void loop() {
 
       if (response.indexOf("\"APPROVED\"") > 0) {
         // SUCCESS: Green LED + Double Beep
-        approved()
+        approved();
 
       } else {
         // DENIED: Red Blinks + Short Beep
-        denied()
+        denied();
       }
 
     } else {
