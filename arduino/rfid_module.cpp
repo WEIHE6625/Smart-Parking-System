@@ -13,9 +13,6 @@
 
 MFRC522 rfid(SS_PIN, RST_PIN);
 
-const char* ENTRY_URL = "http://192.168.200.104:5000/rfid_entry";
-const char* EXIT_URL  = "http://192.168.200.104:5000/rfid_exit";
-
 void approved() {
   Serial.println("Action: OPENING GATE");
   digitalWrite(RED_LED, LOW);
@@ -84,7 +81,7 @@ String readCardUID() {
   return cardID;
 }
 
-void sendRFIDToServer(const char* url) {
+void sendRFIDToServer(String url) {
   String cardID = readCardUID();
 
   if (cardID == "") {
@@ -141,10 +138,10 @@ void setupRFID() {
   Serial.println("Please put your RFID card / tag:");
 }
 
-void handleRFIDEntry() {
-  sendRFIDToServer(ENTRY_URL);
+void handleRFIDEntry(String URL) {
+  sendRFIDToServer(URL);
 }
 
-void handleRFIDExit() {
-  sendRFIDToServer(EXIT_URL);
+void handleRFIDExit(String URL) {
+  sendRFIDToServer(URL);
 }

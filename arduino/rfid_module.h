@@ -2,7 +2,7 @@
 #define RFID_MODULE_H
 
 void setupRFID();
-void handleRFIDEntry();
-void handleRFIDExit();
+void handleRFIDEntry(String URL);
+void handleRFIDExit(String URL);
 
 #endif
