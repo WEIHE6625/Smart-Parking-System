@@ -1,6 +1,8 @@
 from flask import Flask, request, render_template, redirect, url_for, session
 from firebase_admin import db
 
+from rfid_lcd import RFID_LCD
+
 from authentication import auth_bp
 from rfid_module import rfid_bp
 from firebase_config import init_firebase
@@ -16,6 +18,13 @@ app.register_blueprint(rfid_bp)
 
 @app.route('/')
 def home():
+    lcd_display = RFID_LCD()
+
+    zone_ref = db.reference('Parking_Zone')
+    zone_data = zone_ref.get()
+    total_available = zone_data.get('Total_Available_Parking', 0)
+
+    lcd_display.show_default(total_available)
     return redirect(url_for('auth.login'))
 
 @app.route('/topup', methods=['GET', 'POST'])
