@@ -38,8 +38,7 @@ def rfid_entry():
     balance = float(card_data.get('Balance', 0.0)) if card_data else 0.0
 
     if is_Valid:
-        # Fixed: Python booleans must be capitalized (True)
-        display_lcd.show_success(balance, True)
+        display_lcd.show_success(balance, True, get_user_name(card_data))
         current_time = datetime.now().strftime("%Y-%m-%d:%H:%M:%S") 
 
         card_ref.update({
@@ -100,7 +99,7 @@ def rfid_exit():
         )
 
         # Fixed: Pass the newly calculated balance and capitalized False
-        display_lcd.show_success(new_balance, False)
+        display_lcd.show_success(new_balance, False, get_user_name(card_data))
         
         total_available = zone_data.get('Total_Available_Parking', 0) if zone_data else 0
         zone_ref.update({

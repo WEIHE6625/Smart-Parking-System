@@ -15,11 +15,13 @@ class RFID_LCD:
     def show_default(self, available_slot):
         self._update_screen("Parking System", f"A. Slot: {available_slot}")
 
-    def show_success(self, balance, is_entry):
+    def show_success(self, balance, is_entry, user_name):
         if is_entry:
-            self._update_screen("Welcome!", f"Balance: RM{float(balance):.2f}")
+            greeting = f"Welcome {user_name.capitalize()}!" if user_name else "Welcome!"
         else:
-            self._update_screen("Come Again!", f"Balance: RM{float(balance):.2f}")
+            greeting = f"Bye {user_name.capitalize()}!" if user_name else "Come Again!"
+        greeting = greeting[:16]
+        self._update_screen(greeting, f"Bal: RM {float(balance):.2f}")
 
     def show_denied(self, message):
         # Clean up backend messages for the 16x2 character limit if needed
