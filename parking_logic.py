@@ -22,7 +22,7 @@ def rfid_validate_entry(card_data, total_available) -> tuple[bool, str]:
     balance = card_data.get('Balance', 0.0)
     if balance < 20.0:
         print(f"Result: DENIED - Insufficient Funds (RM {balance})")
-        return False, "DENIED_FUNDS"
+        return False, "DENIED_ISUFF_FUNDS"
     
     # RULE 5: Is the card expired?
     expiry_str = card_data.get('Expiry_Date')
