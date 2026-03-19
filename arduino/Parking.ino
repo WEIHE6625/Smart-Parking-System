@@ -3,6 +3,7 @@
 #include <PubSubClient.h>
 
 struct ParkingSlot {
+  const char* zone;
   const char* slotId;
   uint8_t trigPin;
   uint8_t echoPin;
@@ -16,33 +17,66 @@ struct ParkingSlot {
   float lastDistanceCm;
 };
 
+struct IllegalParkingSensor {
+  const char* zone;
+  const char* sensorId;
+  uint8_t trigPin;
+  uint8_t echoPin;
+  float illegalThresholdCm;
+
+  bool illegalDetected;
+  bool candidateIllegal;
+  unsigned long candidateSince;
+  float lastDistanceCm;
+};
+
 ParkingSlot zoneA[] = {
-  { "A1", 18, 5, 19, 21, 12.0, false, false, 0, -1.0 },
-  { "A2", 17, 16, 23, 22, 12.0, false, false, 0, -1.0 }
+  { "Zone_A", "Slot_A1", 18, 5, 19, 21, 5.0, false, false, 0, -1.0 },
+  { "Zone_A", "Slot_A2", 17, 16, 23, 22, 5.0, false, false, 0, -1.0 }
 };
 
 const int SLOT_COUNT = sizeof(zoneA) / sizeof(zoneA[0]);
+
+IllegalParkingSensor illegalSensor = { "Zone_A", "Illegal_Line_A", 32, 33, 8.0, false, false, 0, -1.0 };
+
+const uint8_t BUZZER_PIN = 25;
+const unsigned long BUZZER_ON_MS = 1000;
+const unsigned long BUZZER_OFF_MS = 800;
 
 const char* WIFI_SSID = "B100M-T8";
 const char* WIFI_PASSWORD = "12345678";
 
 // Use your broker IP here
-// Setup: sudo systemctl enable mosquitto.service, then using sudo systemctl status mosquitto.service
-// mosquitto_sub -h localhost -t "parking/#" -v to connect mqtt with raspberry pi
 // Example: if Mosquitto runs on same PC as Flask
 const char* MQTT_BROKER = "192.168.0.101";
 const int   MQTT_PORT   = 1883;
 const char* MQTT_USER = "";
 const char* MQTT_PASS = "";
 
-// Flask Server IP
-const char* FLASK_SERVER = "http://192.168.0.201:5000/rfid_entry"; 
-
 const unsigned long STABLE_TIME_MS = 1000;
 const unsigned long ECHO_TIMEOUT_US = 25000;
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
+
+bool buzzerEnabled = false;
+bool buzzerState = false;
+unsigned long buzzerLastToggle = 0;
+
+void connectWiFi() {
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("Connecting to WiFi");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println();
+  Serial.println("WiFi connected");
+  Serial.print("ESP32 IP: ");
+  Serial.println(WiFi.localIP());
+}
 
 void connectMQTT() {
   while (!mqttClient.connected()) {
@@ -60,9 +94,7 @@ void connectMQTT() {
 
     if (connected) {
       Serial.println("connected");
-
-      // Optional: publish boot status
-      mqttClient.publish("parking/zoneA/system", "Zone A ESP32 online", true);
+      mqttClient.publish("parking/Zone_A/system", "Zone A ESP32 online", true);
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
@@ -70,21 +102,6 @@ void connectMQTT() {
       delay(2000);
     }
   }
-}
-
-void connectWiFi() {
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to WiFi");
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println();
-  Serial.println("WiFi connected");
-  Serial.print("ESP32 IP: ");
-  Serial.println(WiFi.localIP());
 }
 
 void ensureConnections() {
@@ -110,9 +127,57 @@ void setupPins(ParkingSlot &slot) {
   digitalWrite(slot.greenLedPin, LOW);
 }
 
+void setupIllegalSensorPins(IllegalParkingSensor &sensor) {
+  pinMode(sensor.trigPin, OUTPUT);
+  pinMode(sensor.echoPin, INPUT);
+  digitalWrite(sensor.trigPin, LOW);
+}
+
+void setupBuzzer() {
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+}
+
 void applyLedState(const ParkingSlot &slot) {
   digitalWrite(slot.redLedPin, slot.occupied ? HIGH : LOW);
   digitalWrite(slot.greenLedPin, slot.occupied ? LOW : HIGH);
+}
+
+void startBuzzerAlert() {
+  Serial.print("hello world");
+  buzzerEnabled = true;
+  buzzerState = true;
+  buzzerLastToggle = millis();
+  digitalWrite(BUZZER_PIN, HIGH);
+}
+
+void stopBuzzerAlert() {
+  buzzerEnabled = false;
+  buzzerState = false;
+  digitalWrite(BUZZER_PIN, LOW);
+}
+
+void updateBuzzer(unsigned long now) {
+  if (!buzzerEnabled) {
+    digitalWrite(BUZZER_PIN, LOW);
+    return;
+  }
+
+  if (buzzerState) {
+    // currently ON
+    if (now - buzzerLastToggle >= BUZZER_ON_MS) {
+      buzzerState = false;
+      buzzerLastToggle = now;
+      digitalWrite(BUZZER_PIN, LOW);
+    }
+  } else {
+    // currently OFF
+    if (now - buzzerLastToggle >= BUZZER_OFF_MS) {
+      buzzerState = true;
+      buzzerLastToggle = now;
+      digitalWrite(BUZZER_PIN, HIGH);
+    }
+  }
 }
 
 float readDistanceCmOnce(uint8_t trigPin, uint8_t echoPin) {
@@ -150,15 +215,21 @@ bool isOccupied(float distanceCm, float thresholdCm) {
   return distanceCm <= thresholdCm;
 }
 
-void publishSlotStatus(const ParkingSlot &slot) {
-  char topic[64];
-  snprintf(topic, sizeof(topic), "parking/zoneA/%s/status", slot.slotId);
+bool isIllegalParking(float distanceCm, float thresholdCm) {
+  return distanceCm > 0 && distanceCm <= thresholdCm;
+}
 
-  char payload[160];
+void publishSlotStatus(const ParkingSlot &slot) {
+  char topic[80];
+  // Updated topic to be dynamic: parking/zone<A>/Slot_A1/status
+  snprintf(topic, sizeof(topic), "parking/%s/%s/status", slot.zone, slot.slotId);
+
+  char payload[180];
   snprintf(
     payload,
     sizeof(payload),
-    "{\"slot_id\":\"%s\",\"zone\":\"A\",\"status\":\"%s\",\"distance\":%.2f}",
+    "{\"zone\":\"%s\", \"slot_id\":\"%s\",\"status\":\"%s\",\"distance\":%.2f}",
+    slot.zone,
     slot.slotId,
     slot.occupied ? "occupied" : "empty",
     slot.lastDistanceCm
@@ -172,41 +243,28 @@ void publishSlotStatus(const ParkingSlot &slot) {
   Serial.println(ok ? "OK" : "FAILED");
 }
 
-void sendSlotStatusToFlask(const ParkingSlot &slot) {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi disconnected, cannot send to Flask");
-    return;
-  }
+void publishIllegalParkingStatus(const IllegalParkingSensor &sensor) {
+  char topic[100];
+  snprintf(topic, sizeof(topic), "parking/%s/illegal_parking/status", sensor.zone);
 
-  HTTPClient http;
-  http.begin(FLASK_SERVER);
-  http.addHeader("Content-Type", "application/json");
-
-  char payload[200];
+  char payload[220];
   snprintf(
     payload,
     sizeof(payload),
-    "{\"slot_id\":\"%s\",\"zone\":\"A\",\"status\":\"%s\",\"distance\":%.2f}",
-    slot.slotId,
-    slot.occupied ? "occupied" : "empty",
-    slot.lastDistanceCm
+    "{\"zone\":\"%s\",\"sensor_id\":\"%s\",\"illegal_parking\":%s,\"distance\":%.2f,\"message\":\"%s\"}",
+    sensor.zone,
+    sensor.sensorId,
+    sensor.illegalDetected ? "true" : "false",
+    sensor.lastDistanceCm,
+    sensor.illegalDetected ? "Illegal parking detected" : "Illegal parking cleared"
   );
 
-  int httpResponseCode = http.POST(payload);
+  bool ok = mqttClient.publish(topic, payload, true);
 
-  Serial.print("Flask response code: ");
-  Serial.println(httpResponseCode);
-
-  if (httpResponseCode > 0) {
-    String response = http.getString();
-    Serial.print("Flask response: ");
-    Serial.println(response);
-  } else {
-    Serial.print("HTTP POST failed: ");
-    Serial.println(httpResponseCode);
-  }
-
-  http.end();
+  Serial.print("MQTT publish to ");
+  Serial.print(topic);
+  Serial.print(" -> ");
+  Serial.println(ok ? "OK" : "FAILED");
 }
 
 void reportSlotChange(const ParkingSlot &slot) {
@@ -217,8 +275,16 @@ void reportSlotChange(const ParkingSlot &slot) {
   Serial.print(" | Distance: ");
   Serial.print(slot.lastDistanceCm);
   Serial.println(" cm");
+}
 
-  sendSlotStatusToFlask(slot);
+void reportIllegalParkingChange(const IllegalParkingSensor &sensor) {
+  Serial.print("[ILLEGAL] ");
+  Serial.print(sensor.sensorId);
+  Serial.print(" -> ");
+  Serial.print(sensor.illegalDetected ? "DETECTED" : "CLEARED");
+  Serial.print(" | Distance: ");
+  Serial.print(sensor.lastDistanceCm);
+  Serial.println(" cm");
 }
 
 void initializeSlotState(ParkingSlot &slot) {
@@ -231,6 +297,24 @@ void initializeSlotState(ParkingSlot &slot) {
   slot.candidateSince = millis();
 
   applyLedState(slot);
+}
+
+void initializeIllegalParkingState(IllegalParkingSensor &sensor) {
+  float d = readDistanceCmFiltered(sensor.trigPin, sensor.echoPin);
+  sensor.lastDistanceCm = d;
+  Serial.print(d);
+  bool initialState = (d > 0) ? isIllegalParking(d, sensor.illegalThresholdCm) : false;
+  sensor.illegalDetected = initialState;
+  sensor.candidateIllegal = initialState;
+  sensor.candidateSince = millis();
+
+  if (sensor.illegalDetected) {
+    startBuzzerAlert();
+    Serial.print("H");
+  } else {
+    Serial.print("hello");
+    stopBuzzerAlert();
+  }
 }
 
 void updateSlot(ParkingSlot &slot, unsigned long now) {
@@ -253,6 +337,34 @@ void updateSlot(ParkingSlot &slot, unsigned long now) {
   }
 }
 
+void updateIllegalParking(IllegalParkingSensor &sensor, unsigned long now) {
+  float distance = readDistanceCmFiltered(sensor.trigPin, sensor.echoPin);
+  if (distance < 0) return;
+
+  sensor.lastDistanceCm = distance;
+  bool rawIllegal = isIllegalParking(distance, sensor.illegalThresholdCm);
+
+  if (rawIllegal != sensor.candidateIllegal) {
+    sensor.candidateIllegal = rawIllegal;
+    sensor.candidateSince = now;
+  }
+
+  if (sensor.illegalDetected != sensor.candidateIllegal &&
+      now - sensor.candidateSince >= STABLE_TIME_MS) {
+
+    sensor.illegalDetected = sensor.candidateIllegal;
+
+    reportIllegalParkingChange(sensor);
+    publishIllegalParkingStatus(sensor);
+
+    if (sensor.illegalDetected) {
+      startBuzzerAlert();
+    } else {
+      stopBuzzerAlert();
+    }
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
@@ -260,6 +372,9 @@ void setup() {
   for (int i = 0; i < SLOT_COUNT; i++) {
     setupPins(zoneA[i]);
   }
+
+  setupIllegalSensorPins(illegalSensor);
+  setupBuzzer();
 
   connectWiFi();
   mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
@@ -270,14 +385,23 @@ void setup() {
   for (int i = 0; i < SLOT_COUNT; i++) {
     initializeSlotState(zoneA[i]);
     reportSlotChange(zoneA[i]);
+    publishSlotStatus(zoneA[i]);
   }
+
+  initializeIllegalParkingState(illegalSensor);
+  reportIllegalParkingChange(illegalSensor);
+  publishIllegalParkingStatus(illegalSensor);
 }
 
 void loop() {
   ensureConnections();
+
   unsigned long now = millis();
 
   for (int i = 0; i < SLOT_COUNT; i++) {
     updateSlot(zoneA[i], now);
   }
+
+  updateIllegalParking(illegalSensor, now);
+  updateBuzzer(now);
 }

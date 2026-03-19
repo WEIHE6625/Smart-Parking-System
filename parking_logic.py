@@ -1,7 +1,36 @@
 import math
+import json
+import paho.mqtt.client as mqtt
+
 from datetime import datetime
 from firebase_admin import db
+from queue import Queue
 
+parking_state = {
+    "TOTAL_AVAILABLE": 4,
+    "ZONE_AVAILABLE": {
+        "Zone_A": 2,
+        "Zone_B": 2
+    },
+    "SLOTS": {
+        "Zone_A": {
+            "Slot_A1": {"status": "empty", "distance": 0},
+            "Slot_A2": {"status": "empty", "distance": 0}
+        },
+        "Zone_B": {
+            "Slot_B1": {"status": "empty", "distance": 0},
+            "Slot_B2": {"status": "empty", "distance": 0}
+        }
+    }
+}
+
+clients = []
+
+MQTT_BROKER = "192.168.0.101"
+MQTT_PORT = 1883
+MQTT_TOPIC = "parking/+/+/status"
+
+# RFID module
 def rfid_validate_entry(card_data, total_available) -> tuple[bool, str]: 
     # RULE 1: Does the card exist?
     if card_data is None:
@@ -102,3 +131,85 @@ def calculate_parking_fee(entry_time, exit_time, first_hour_fee=2, fee_per_hour=
     except ValueError as e:
         print(f"Error calculating time: {e}")
         return 0.0
+    
+# Parking slot module
+def recalculate_available():
+    total = 0
+
+    for zone, slots in parking_state["SLOTS"].items():
+        available = 0
+        for slot_id, slot_data in slots.items():
+            if slot_data["status"] == "empty":
+                available += 1
+
+        parking_state["ZONE_AVAILABLE"][zone] = available
+        total += available
+
+    parking_state["TOTAL_AVAILABLE"] = total
+
+
+def broadcast_state():
+    data = json.dumps(parking_state)
+    dead_clients = []
+
+    for q in clients:
+        try:
+            q.put(data, timeout=0.1)
+        except:
+            dead_clients.append(q)
+
+    for q in dead_clients:
+        if q in clients:
+            clients.remove(q)
+
+
+def update_slot(zone, slot_id, status, distance):
+    if zone not in parking_state["SLOTS"]:
+        return
+
+    if slot_id not in parking_state["SLOTS"][zone]:
+        return
+
+    parking_state["SLOTS"][zone][slot_id]["status"] = status
+    parking_state["SLOTS"][zone][slot_id]["distance"] = distance
+
+    recalculate_available()
+    broadcast_state()
+
+    # print(f"[MQTT] {zone} {slot_id} -> {status} | distance={distance}")
+    # print(f"TOTAL_AVAILABLE = {parking_state['TOTAL_AVAILABLE']}")
+    # print(f"Zone_A = {parking_state['ZONE_AVAILABLE']['Zone_A']}")
+    # print(f"Zone_B = {parking_state['ZONE_AVAILABLE']['Zone_B']}")
+
+
+def on_connect(client, userdata, flags, rc):
+    print("Connected to MQTT broker with code:", rc)
+    client.subscribe(MQTT_TOPIC)
+    print("Subscribed to:", MQTT_TOPIC)
+
+
+def on_message(client, userdata, msg):
+    try:
+        payload = json.loads(msg.payload.decode())
+
+        zone = payload.get("zone")
+        slot_id = payload.get("slot_id")
+        status = payload.get("status")
+        distance = payload.get("distance", 0)
+
+        if not zone or not slot_id or not status:
+            print("Invalid MQTT payload:", payload)
+            return
+
+        update_slot(zone, slot_id, status, distance)
+
+    except Exception as e:
+        print("MQTT message error:", e)
+
+
+def start_mqtt_listener():
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.loop_forever()

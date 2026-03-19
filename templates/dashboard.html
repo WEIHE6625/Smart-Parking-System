@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Parking Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f4f6f9;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .summary {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            min-width: 180px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .zones {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .zone-box {
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            min-width: 320px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .slot {
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .empty {
+            background: green;
+        }
+
+        .occupied {
+            background: red;
+        }
+
+        .small {
+            display: block;
+            font-size: 13px;
+            font-weight: normal;
+            margin-top: 4px;
+        }
+
+        .status-bar {
+            margin-top: 14px;
+            font-size: 14px;
+            color: #444;
+        }
+    </style>
+</head>
+<body>
+    <h1>Realtime Parking Dashboard</h1>
+
+    <div class="summary">
+        <div class="card">
+            <h3>Total Available</h3>
+            <p id="totalAvailable">{{ parking_state.TOTAL_AVAILABLE }}</p>
+        </div>
+
+        <div class="card">
+            <h3>Zone A Available</h3>
+            <p id="zoneAAvailable">{{ parking_state.ZONE_AVAILABLE.Zone_A }}</p>
+        </div>
+
+        <div class="card">
+            <h3>Zone B Available</h3>
+            <p id="zoneBAvailable">{{ parking_state.ZONE_AVAILABLE.Zone_B }}</p>
+        </div>
+    </div>
+
+    <div class="zones">
+        <div class="zone-box">
+            <h2>Zone A</h2>
+
+            <div id="Slot_A1" class="slot {{ parking_state.SLOTS.Zone_A.Slot_A1.status }}">
+                Slot_A1 - {{ parking_state.SLOTS.Zone_A.Slot_A1.status }}
+                <span class="small">
+                    Distance: {{ parking_state.SLOTS.Zone_A.Slot_A1.distance }} cm
+                </span>
+            </div>
+
+            <div id="Slot_A2" class="slot {{ parking_state.SLOTS.Zone_A.Slot_A2.status }}">
+                Slot_A2 - {{ parking_state.SLOTS.Zone_A.Slot_A2.status }}
+                <span class="small">
+                    Distance: {{ parking_state.SLOTS.Zone_A.Slot_A2.distance }} cm
+                </span>
+            </div>
+        </div>
+
+        <div class="zone-box">
+            <h2>Zone B</h2>
+
+            <div id="Slot_B1" class="slot {{ parking_state.SLOTS.Zone_B.Slot_B1.status }}">
+                Slot_B1 - {{ parking_state.SLOTS.Zone_B.Slot_B1.status }}
+                <span class="small">
+                    Distance: {{ parking_state.SLOTS.Zone_B.Slot_B1.distance }} cm
+                </span>
+            </div>
+
+            <div id="Slot_B2" class="slot {{ parking_state.SLOTS.Zone_B.Slot_B2.status }}">
+                Slot_B2 - {{ parking_state.SLOTS.Zone_B.Slot_B2.status }}
+                <span class="small">
+                    Distance: {{ parking_state.SLOTS.Zone_B.Slot_B2.distance }} cm
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        Live connection: <span id="liveStatus">Connecting...</span>
+    </div>
+
+    <script>
+        const source = new EventSource("/stream");
+
+        source.onopen = function () {
+            document.getElementById("liveStatus").textContent = "Connected";
+        };
+
+        source.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+
+            document.getElementById("totalAvailable").textContent = data.TOTAL_AVAILABLE;
+            document.getElementById("zoneAAvailable").textContent = data.ZONE_AVAILABLE.Zone_A;
+            document.getElementById("zoneBAvailable").textContent = data.ZONE_AVAILABLE.Zone_B;
+
+            updateSlot("Slot_A1", data.SLOTS.Zone_A.Slot_A1);
+            updateSlot("Slot_A2", data.SLOTS.Zone_A.Slot_A2);
+            updateSlot("Slot_B1", data.SLOTS.Zone_B.Slot_B1);
+            updateSlot("Slot_B2", data.SLOTS.Zone_B.Slot_B2);
+        };
+
+        source.onerror = function () {
+            document.getElementById("liveStatus").textContent = "Disconnected / retrying...";
+        };
+
+        function updateSlot(slotId, slotData) {
+            const el = document.getElementById(slotId);
+            el.className = "slot " + slotData.status;
+            el.innerHTML = `
+                ${slotId} - ${slotData.status}
+                <span class="small">Distance: ${slotData.distance} cm</span>
+            `;
+        }
+    </script>
+</body>
+</html>

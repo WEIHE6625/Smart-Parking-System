@@ -1,10 +1,13 @@
 from flask import Flask, request, render_template, redirect, url_for, session
+import threading
 from firebase_admin import db
+import paho.mqtt.client as mqtt
 
-from rfid_lcd import RFID_LCD
+# from rfid_lcd import RFID_LCD
 
 from authentication import auth_bp
-from rfid_module import rfid_bp
+# from rfid_module import rfid_bp
+from parking_slot_module import *
 from firebase_config import init_firebase
 from parking_logic import *
 
@@ -14,18 +17,22 @@ app.secret_key = "secretkey"
 init_firebase()
 
 app.register_blueprint(auth_bp)
-app.register_blueprint(rfid_bp)
+# app.register_blueprint(rfid_bp)
+app.register_blueprint(slot_bp)
+
 
 @app.route('/')
 def home():
-    lcd_display = RFID_LCD()
-
-    zone_ref = db.reference('Parking_Zone')
-    zone_data = zone_ref.get()
-    total_available = zone_data.get('Total_Available_Parking', 0)
-
-    lcd_display.show_default(total_available)
+    # lcd_display = RFID_LCD()
+    # lcd_display.show_default(total_available)
     return redirect(url_for('auth.login'))
+
+@app.route('/dashboard')
+def dashboard():
+    return render_template(
+        'dashboard.html',
+        parking_state=parking_state
+    )
 
 @app.route('/topup', methods=['GET', 'POST'])
 def topup():
@@ -58,4 +65,6 @@ def topup():
     return render_template('topup.html', balance=current_balance, card_id=user_card_id, success=success_msg)
 
 if __name__ == '__main__':
+    mqtt_thread = threading.Thread(target=start_mqtt_listener, daemon=True)
+    mqtt_thread.start()
     app.run(host='0.0.0.0', port=5000, debug=True)

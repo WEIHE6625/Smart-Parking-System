@@ -54,6 +54,19 @@ def login():
             user_data = response.json()
             firebase_uid = user_data['localId']
 
+            user_ref = db.reference(f'User/{firebase_uid}').get()
+
+            if not user_ref:
+                return render_template('login.html', error="User profile not found.")
+
+            user_role = user_ref.get('role', '').lower()
+            session['user_id'] = firebase_uid
+            session['role'] = user_role
+            
+            if user_role == 'admin':
+                session['card_id'] = None
+                return redirect(url_for('dashboard')) 
+            
             cards_ref = db.reference('Card').get()
             user_card_id = None
             
