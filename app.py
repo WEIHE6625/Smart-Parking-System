@@ -24,7 +24,7 @@ app.register_blueprint(slot_bp)
 @app.route('/')
 def home():
     # lcd_display = RFID_LCD()
-    # lcd_display.show_default(total_available)
+    # lcd_display.show_default(parking_state.get("TOTAL_AVAILABLE"))
     return redirect(url_for('auth.login'))
 
 @app.route('/dashboard')
