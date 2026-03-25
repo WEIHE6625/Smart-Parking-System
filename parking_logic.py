@@ -168,7 +168,7 @@ def recalculate_available():
         total += available
 
     parking_state["TOTAL_AVAILABLE"] = total
-    lcd_display.show_default(total)
+    lcd_display.show_default()
 
 
 def broadcast_state():
@@ -207,7 +207,7 @@ def update_slot(zone, slot_id, status, distance):
 
     recalculate_available()
     if previous_status != status:
-        lcd_display.show_slot_update(zone, slot_id, status, parking_state["TOTAL_AVAILABLE"])
+        lcd_display.show_slot_update(zone, slot_id, status)
 
     broadcast_state()
 
@@ -285,3 +285,8 @@ def start_mqtt_listener():
     client.on_message = on_message
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_forever()
+
+def get_total_available():
+    return parking_state["TOTAL_AVAILABLE"]
+
+lcd_display.set_available_provider(get_total_available)
