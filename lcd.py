@@ -8,6 +8,10 @@ class LCD:
         self.lcd = JHD1802()
         self.available_provider = None
         self._lock = threading.Lock()
+        self._last_line1 = None
+        self._last_line2 = None
+        self._last_update_time = 0
+        self._min_update_gap = 0.2  # minimum gap between LCD writes
 
     def set_available_provider(self, provider_func):
         self.available_provider = provider_func
@@ -25,22 +29,39 @@ class LCD:
         return str(text)[:16].ljust(16)
 
     def _update_screen(self, line1, line2=""):
+        line1 = self._safe_text(line1)
+        line2 = self._safe_text(line2)
+
         with self._lock:
-            # Write full 16 chars for both lines so old characters get overwritten
+            now = time.time()
+
+            # Skip if same content already shown
+            if line1 == self._last_line1 and line2 == self._last_line2:
+                return
+
+            elapsed = now - self._last_update_time
+            if elapsed < self._min_update_gap:
+                time.sleep(self._min_update_gap - elapsed)
+
             self.lcd.setCursor(0, 0)
-            self.lcd.write(self._safe_text(line1))
+            self.lcd.write(line1)
+
+            time.sleep(0.05)
 
             self.lcd.setCursor(1, 0)
-            self.lcd.write(self._safe_text(line2))
+            self.lcd.write(line2)
 
-    def clear_and_default(self):
-        # Do not blank then redraw immediately, that can cause flicker / messy text
-        time.sleep(0.1)
-        self.show_default()
+            self._last_line1 = line1
+            self._last_line2 = line2
+            self._last_update_time = time.time()
 
     def show_default(self):
         available_slot = self._get_available_slot()
         self._update_screen("Parking System", f"Slot: {available_slot}")
+
+    def clear_and_default(self):
+        time.sleep(0.1)
+        self.show_default()
 
     def show_success(self, balance, is_entry, user_name):
         if is_entry:
@@ -69,7 +90,7 @@ class LCD:
 
         self._update_screen(f"{short_slot} {short_status}", f"Slot: {total_available}")
 
-        time.sleep(5)
+        time.sleep(2)
         self.show_default()
 
 
