@@ -31,16 +31,16 @@ struct IllegalParkingSensor {
 };
 
 ParkingSlot zoneA[] = {
-  { "Zone_A", "Slot_A1", 26, 27, 19, 21, 5.0, false, false, 0, -1.0 },
-  { "Zone_A", "Slot_A2", 17, 16, 23, 22, 5.0, false, false, 0, -1.0 }
+  { "Zone_A", "Slot_A1", 26, 27, 19, 21, 8.0, false, false, 0, -1.0 },
+  { "Zone_A", "Slot_A2", 17, 16, 23, 22, 8.0, false, false, 0, -1.0 }
 };
 
 const int SLOT_COUNT = sizeof(zoneA) / sizeof(zoneA[0]);
 
-IllegalParkingSensor illegalSensor = { "Zone_A", "Illegal_Line_A", 32, 33, 8.0, false, false, 0, -1.0 };
+IllegalParkingSensor illegalSensor = { "Zone_A", "Illegal_Line_A", 32, 33, 12.0, false, false, 0, -1.0 };
 
 const uint8_t BUZZER_PIN = 25;
-const uint8_t WARNING_LED_PIN = 26;
+const uint8_t WARNING_LED_PIN = 14;
 
 const unsigned long BUZZER_ON_MS = 1000;
 const unsigned long BUZZER_OFF_MS = 800;
@@ -201,12 +201,6 @@ float readDistanceCmOnce(uint8_t trigPin, uint8_t echoPin) {
   digitalWrite(trigPin, LOW);
 
   unsigned long duration = pulseIn(echoPin, HIGH, ECHO_TIMEOUT_US);
-  Serial.print("TRIG=");
-  Serial.print(trigPin);
-  Serial.print(" ECHO=");
-  Serial.print(echoPin);
-  Serial.print(" duration=");
-  Serial.println(duration);
 
   if (duration == 0) return -1.0;
 
@@ -223,7 +217,7 @@ float readDistanceCmFiltered(uint8_t trigPin, uint8_t echoPin) {
       sum += d;
       validCount++;
     }
-    delay(800);
+    delay(10);
   }
 
   if (validCount == 0) return -2.0;
@@ -336,8 +330,6 @@ void initializeIllegalParkingState(IllegalParkingSensor &sensor) {
 
 void updateSlot(ParkingSlot &slot, unsigned long now) {
   float distance = readDistanceCmFiltered(slot.trigPin, slot.echoPin);
-  Serial.print("Distance");
-  Serial.println(distance);
   if (distance < 0) return;
 
   slot.lastDistanceCm = distance;
