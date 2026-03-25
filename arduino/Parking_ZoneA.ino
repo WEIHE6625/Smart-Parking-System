@@ -234,7 +234,7 @@ bool isIllegalParking(float distanceCm, float thresholdCm) {
 
 void publishSlotStatus(const ParkingSlot &slot) {
   char topic[80];
-  // Updated topic to be dynamic: parking/zone<A>/Slot_A1/status
+  // Updated topic to be dynamic: parking/Zone_A/Slot_A1/status
   snprintf(topic, sizeof(topic), "parking/%s/%s/status", slot.zone, slot.slotId);
 
   char payload[180];
@@ -264,12 +264,11 @@ void publishIllegalParkingStatus(const IllegalParkingSensor &sensor) {
   snprintf(
     payload,
     sizeof(payload),
-    "{\"zone\":\"%s\",\"sensor_id\":\"%s\",\"illegal_parking\":%s,\"distance\":%.2f,\"message\":\"%s\"}",
+    "{\"zone\":\"%s\",\"sensor_id\":\"%s\",\"illegal_parking\":%s,\"distance\":%.2f}",
     sensor.zone,
     sensor.sensorId,
     sensor.illegalDetected ? "true" : "false",
-    sensor.lastDistanceCm,
-    sensor.illegalDetected ? "Illegal parking detected" : "Illegal parking cleared"
+    sensor.lastDistanceCm
   );
 
   bool ok = mqttClient.publish(topic, payload, true);

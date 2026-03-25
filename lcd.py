@@ -81,7 +81,7 @@ class LCD:
     def show_slot_update(self, zone, slot_id, status):
         total_available = self._get_available_slot()
 
-        short_slot = slot_id.replace("Slot_", "")
+        short_slot = slot_id.replace("_", "")
         short_status = "Occupied" if status.lower() == "occupied" else "Empty"
 
         self._update_screen(f"{short_slot} {short_status}", f"Slot: {total_available}")

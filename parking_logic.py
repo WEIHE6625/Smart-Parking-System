@@ -26,13 +26,11 @@ parking_state = {
     },
     "ILLEGAL_PARKING": {
         "Zone_A": {
-            "sensor_id": "Illegal_Line_A",
             "detected": False,
             "distance": 0,
             "message": ""
         },
         "Zone_B": {
-            "sensor_id": "",
             "detected": False,
             "distance": 0,
             "message": ""
@@ -216,10 +214,9 @@ def update_slot(zone, slot_id, status, distance):
     # print(f"Zone_A = {parking_state['ZONE_AVAILABLE']['Zone_A']}")
     # print(f"Zone_B = {parking_state['ZONE_AVAILABLE']['Zone_B']}")
 
-def update_illegal_parking(zone, sensor_id, illegal_detected, distance, message=""):
+def update_illegal_parking(zone, illegal_detected, distance):
     if zone not in parking_state["ILLEGAL_PARKING"]:
         parking_state["ILLEGAL_PARKING"][zone] = {
-            "sensor_id": sensor_id,
             "detected": False,
             "distance": 0,
             "message": ""
@@ -227,10 +224,8 @@ def update_illegal_parking(zone, sensor_id, illegal_detected, distance, message=
 
     previous_detected = parking_state["ILLEGAL_PARKING"][zone]["detected"]
 
-    parking_state["ILLEGAL_PARKING"][zone]["sensor_id"] = sensor_id
     parking_state["ILLEGAL_PARKING"][zone]["detected"] = illegal_detected
     parking_state["ILLEGAL_PARKING"][zone]["distance"] = distance
-    parking_state["ILLEGAL_PARKING"][zone]["message"] = message
 
     if illegal_detected and not previous_detected:
         zone_label = zone.replace("_", " ")
@@ -257,12 +252,10 @@ def on_message(client, userdata, msg):
             return
 
         if "illegal_parking" in payload:
-            sensor_id = payload.get("sensor_id", "Illegal_Line")
             illegal_detected = bool(payload.get("illegal_parking", False))
             distance = payload.get("distance", 0)
-            message = payload.get("message", "")
 
-            update_illegal_parking(zone, sensor_id, illegal_detected, distance, message)
+            update_illegal_parking(zone, illegal_detected, distance)
             return
 
         slot_id = payload.get("slot_id")

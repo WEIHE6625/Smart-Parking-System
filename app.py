@@ -3,10 +3,10 @@ import threading
 from firebase_admin import db
 import paho.mqtt.client as mqtt
 
-# from lcd import LCD
+from lcd import LCD
 
 from authentication import auth_bp
-# from rfid_module import rfid_bp
+from rfid_module import rfid_bp
 from parking_slot_module import *
 from firebase_config import init_firebase
 from parking_logic import *
@@ -17,14 +17,14 @@ app.secret_key = "secretkey"
 init_firebase()
 
 app.register_blueprint(auth_bp)
-# app.register_blueprint(rfid_bp)
+app.register_blueprint(rfid_bp)
 app.register_blueprint(slot_bp)
 
 
 @app.route('/')
 def home():
-    # lcd_display = LCD()
-    # lcd_display.show_default(parking_state.get("TOTAL_AVAILABLE"))
+    lcd_display = LCD()
+    lcd_display.show_default(parking_state.get("TOTAL_AVAILABLE"))
     return redirect(url_for('auth.login'))
 
 @app.route('/dashboard')
