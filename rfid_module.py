@@ -3,11 +3,12 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from firebase_admin import db
 
-from rfid_lcd import RFID_LCD
+from lcd import LCD
 from parking_logic import *
+from parking_logic import parking_state
 
 rfid_bp = Blueprint('rfid', __name__)
-display_lcd = RFID_LCD()
+display_lcd = LCD()
 
 def reset_lcd_to_default():
     try:
@@ -99,7 +100,7 @@ def rfid_exit():
         )
 
         # Fixed: Pass the newly calculated balance and capitalized False
-        display_lcd.show_success(new_balance, False, get_user_name(card_data))
+        display_lcd.show_success(new_balance, False, get_user_name(card_data), parking_state["TOTAL_AVAILABLE"])
         
         total_available = zone_data.get('Total_Available_Parking', 0) if zone_data else 0
         zone_ref.update({
@@ -109,7 +110,7 @@ def rfid_exit():
         print("Result: APPROVED - Gate Opening")
         
     else:
-        display_lcd.show_denied(message)
+        display_lcd.show_denied(message, parking_state["TOTAL_AVAILABLE"])
 
     # Start a background timer to reset the LCD to default after 3 seconds
     threading.Timer(3.0, reset_lcd_to_default).start()
