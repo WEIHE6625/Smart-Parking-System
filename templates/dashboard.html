@@ -72,10 +72,92 @@
             font-size: 14px;
             color: #444;
         }
+
+        .illegal-status {
+            margin-top: 24px;
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .illegal-item {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .illegal-clear {
+            background: #2e7d32;
+        }
+
+        .illegal-detected {
+            background: #c62828;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            min-width: 320px;
+            max-width: 420px;
+            background: #c62828;
+            color: white;
+            padding: 16px 18px;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            display: none;
+            z-index: 9999;
+            animation: slideIn 0.25s ease-out;
+        }
+
+        .toast.show {
+            display: block;
+        }
+
+        .toast h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+        }
+
+        .toast p {
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        .toast button {
+            margin-top: 12px;
+            border: none;
+            background: white;
+            color: #c62828;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
     <h1>Realtime Parking Dashboard</h1>
+
+    <div id="toast" class="toast">
+        <h3>Warning</h3>
+        <p id="toastMessage">Illegal parking detected.</p>
+        <button onclick="hideToast()">Close</button>
+    </div>
 
     <div class="summary">
         <div class="card">
@@ -132,12 +214,25 @@
         </div>
     </div>
 
+    <div class="illegal-status">
+        <h2>Illegal Parking Status</h2>
+
+        <div id="illegalZoneA" class="illegal-item {% if parking_state.ILLEGAL_PARKING.Zone_A.detected %}illegal-detected{% else %}illegal-clear{% endif %}">
+            Zone A - {% if parking_state.ILLEGAL_PARKING.Zone_A.detected %}DETECTED{% else %}CLEAR{% endif %}
+            <span class="small">
+                Distance: {{ parking_state.ILLEGAL_PARKING.Zone_A.distance }} cm
+            </span>
+        </div>
+    </div>
+
     <div class="status-bar">
         Live connection: <span id="liveStatus">Connecting...</span>
     </div>
 
     <script>
         const source = new EventSource("/stream");
+        let lastAlertTimestamp = "";
+        let toastTimer = null;
 
         source.onopen = function () {
             document.getElementById("liveStatus").textContent = "Connected";
@@ -154,6 +249,9 @@
             updateSlot("Slot_A2", data.SLOTS.Zone_A.Slot_A2);
             updateSlot("Slot_B1", data.SLOTS.Zone_B.Slot_B1);
             updateSlot("Slot_B2", data.SLOTS.Zone_B.Slot_B2);
+
+            updateIllegalZone("illegalZoneA", "Zone A", data.ILLEGAL_PARKING.Zone_A);
+            handleAlert(data.ALERT);
         };
 
         source.onerror = function () {
@@ -167,6 +265,54 @@
                 ${slotId} - ${slotData.status}
                 <span class="small">Distance: ${slotData.distance} cm</span>
             `;
+        }
+
+        function updateIllegalZone(elementId, zoneLabel, illegalData) {
+            const el = document.getElementById(elementId);
+            const detected = illegalData && illegalData.detected;
+            const distance = illegalData ? illegalData.distance : 0;
+
+            el.className = "illegal-item " + (detected ? "illegal-detected" : "illegal-clear");
+            el.innerHTML = `
+                ${zoneLabel} - ${detected ? "DETECTED" : "CLEAR"}
+                <span class="small">Distance: ${distance} cm</span>
+            `;
+        }
+
+        function handleAlert(alertData) {
+            if (!alertData || !alertData.timestamp) {
+                return;
+            }
+
+            if (alertData.timestamp === lastAlertTimestamp) {
+                return;
+            }
+
+            lastAlertTimestamp = alertData.timestamp;
+
+            if (alertData.type === "illegal_parking") {
+                showToast(alertData.message || "Zone A have illegal parking detected.");
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            const toastMessage = document.getElementById("toastMessage");
+
+            toastMessage.textContent = message;
+            toast.classList.add("show");
+
+            if (toastTimer) {
+                clearTimeout(toastTimer);
+            }
+
+            toastTimer = setTimeout(() => {
+                hideToast();
+            }, 5000);
+        }
+
+        function hideToast() {
+            document.getElementById("toast").classList.remove("show");
         }
     </script>
 </body>

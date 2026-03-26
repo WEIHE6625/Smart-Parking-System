@@ -2,8 +2,7 @@ from flask import Flask, request, render_template, redirect, url_for, session
 import threading
 from firebase_admin import db
 import paho.mqtt.client as mqtt
-
-from rfid_lcd import RFID_LCD
+from lcd import lcd_display
 
 from authentication import auth_bp
 from rfid_module import rfid_bp
@@ -23,7 +22,6 @@ app.register_blueprint(slot_bp)
 
 @app.route('/')
 def home():
-    lcd_display = RFID_LCD()
     lcd_display.show_default(parking_state.get("TOTAL_AVAILABLE"))
     return redirect(url_for('auth.login'))
 

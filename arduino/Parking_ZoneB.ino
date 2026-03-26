@@ -31,24 +31,30 @@ struct IllegalParkingSensor {
 };
 
 ParkingSlot zoneA[] = {
-  { "Zone_A", "Slot_A1", 18, 5, 19, 21, 5.0, false, false, 0, -1.0 },
-  { "Zone_A", "Slot_A2", 17, 16, 23, 22, 5.0, false, false, 0, -1.0 }
+  { "Zone_B", "Slot_B1", 26, 27, 19, 21, 8.0, false, false, 0, -1.0 },
+  { "Zone_B", "Slot_B2", 17, 16, 23, 22, 8.0, false, false, 0, -1.0 }
 };
 
 const int SLOT_COUNT = sizeof(zoneA) / sizeof(zoneA[0]);
 
-IllegalParkingSensor illegalSensor = { "Zone_A", "Illegal_Line_A", 32, 33, 8.0, false, false, 0, -1.0 };
+IllegalParkingSensor illegalSensor = { "Zone_B", "Illegal_Line_B", 32, 33, 12.0, false, false, 0, -1.0 };
 
 const uint8_t BUZZER_PIN = 25;
+const uint8_t WARNING_LED_PIN = 14;
+
 const unsigned long BUZZER_ON_MS = 1000;
 const unsigned long BUZZER_OFF_MS = 800;
+const int BUZZER_FREQUENCY = 2000;
+const int BUZZER_CHANNEL = 0;
+const int BUZZER_RESOLUTION = 8;
 
 const char* WIFI_SSID = "B100M-T8";
 const char* WIFI_PASSWORD = "12345678";
 
+
 // Use your broker IP here
 // Example: if Mosquitto runs on same PC as Flask
-const char* MQTT_BROKER = "192.168.0.101";
+const char* MQTT_BROKER = "192.168.0.102";
 const int   MQTT_PORT   = 1883;
 const char* MQTT_USER = "";
 const char* MQTT_PASS = "";
@@ -134,8 +140,13 @@ void setupIllegalSensorPins(IllegalParkingSensor &sensor) {
 }
 
 void setupBuzzer() {
-  pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, LOW);
+  ledcAttach(BUZZER_PIN, BUZZER_FREQUENCY, BUZZER_RESOLUTION);
+  ledcWriteTone(BUZZER_PIN, 0);
+}
+
+void setupWarningLed() {
+  pinMode(WARNING_LED_PIN, OUTPUT);
+  digitalWrite(WARNING_LED_PIN, LOW);
 }
 
 void applyLedState(const ParkingSlot &slot) {
@@ -144,22 +155,23 @@ void applyLedState(const ParkingSlot &slot) {
 }
 
 void startBuzzerAlert() {
-  Serial.print("hello world");
   buzzerEnabled = true;
   buzzerState = true;
   buzzerLastToggle = millis();
-  digitalWrite(BUZZER_PIN, HIGH);
+  ledcWriteTone(BUZZER_PIN, BUZZER_FREQUENCY);
+  digitalWrite(WARNING_LED_PIN, HIGH);
 }
 
 void stopBuzzerAlert() {
   buzzerEnabled = false;
   buzzerState = false;
-  digitalWrite(BUZZER_PIN, LOW);
+  ledcWriteTone(BUZZER_PIN, 0);
+  digitalWrite(WARNING_LED_PIN, LOW);
 }
 
 void updateBuzzer(unsigned long now) {
   if (!buzzerEnabled) {
-    digitalWrite(BUZZER_PIN, LOW);
+    ledcWriteTone(BUZZER_PIN, 0);
     return;
   }
 
@@ -168,14 +180,14 @@ void updateBuzzer(unsigned long now) {
     if (now - buzzerLastToggle >= BUZZER_ON_MS) {
       buzzerState = false;
       buzzerLastToggle = now;
-      digitalWrite(BUZZER_PIN, LOW);
+      ledcWriteTone(BUZZER_PIN, 0);
     }
   } else {
     // currently OFF
     if (now - buzzerLastToggle >= BUZZER_OFF_MS) {
       buzzerState = true;
       buzzerLastToggle = now;
-      digitalWrite(BUZZER_PIN, HIGH);
+      ledcWriteTone(BUZZER_PIN, BUZZER_FREQUENCY);
     }
   }
 }
@@ -189,6 +201,7 @@ float readDistanceCmOnce(uint8_t trigPin, uint8_t echoPin) {
   digitalWrite(trigPin, LOW);
 
   unsigned long duration = pulseIn(echoPin, HIGH, ECHO_TIMEOUT_US);
+
   if (duration == 0) return -1.0;
 
   return duration * 0.017;
@@ -310,9 +323,7 @@ void initializeIllegalParkingState(IllegalParkingSensor &sensor) {
 
   if (sensor.illegalDetected) {
     startBuzzerAlert();
-    Serial.print("H");
   } else {
-    Serial.print("hello");
     stopBuzzerAlert();
   }
 }
@@ -375,6 +386,7 @@ void setup() {
 
   setupIllegalSensorPins(illegalSensor);
   setupBuzzer();
+  setupWarningLed();
 
   connectWiFi();
   mqttClient.setServer(MQTT_BROKER, MQTT_PORT);

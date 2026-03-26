@@ -1,10 +1,12 @@
 import math
+import time
 import json
 import paho.mqtt.client as mqtt
 
 from datetime import datetime
 from firebase_admin import db
 from queue import Queue
+from lcd import lcd_display
 
 parking_state = {
     "TOTAL_AVAILABLE": 4,
@@ -21,33 +23,46 @@ parking_state = {
             "Slot_B1": {"status": "empty", "distance": 0},
             "Slot_B2": {"status": "empty", "distance": 0}
         }
+    },
+    "ILLEGAL_PARKING": {
+        "Zone_A": {
+            "detected": False,
+            "distance": 0,
+            "message": ""
+        },
+        "Zone_B": {
+            "detected": False,
+            "distance": 0,
+            "message": ""
+        }
+    },
+    "ALERT": {
+        "type": "",
+        "zone": "",
+        "message": "",
+        "timestamp": ""
     }
 }
 
 clients = []
 
-MQTT_BROKER = "192.168.0.101"
+MQTT_BROKER = "192.168.0.102"
 MQTT_PORT = 1883
 MQTT_TOPIC = "parking/+/+/status"
 
 # RFID module
-def rfid_validate_entry(card_data, total_available) -> tuple[bool, str]: 
+def rfid_validate_entry(card_data) -> tuple[bool, str]: 
     # RULE 1: Does the card exist?
     if card_data is None:
         print("Result: DENIED - Unregistered Card")
         return False, "DENIED_UNREGISTERED"
 
-    # RULE 2: Is the parking lot full?
-    if total_available <= 0:
-        print("Result: DENIED - Parking Lot Full")
-        return False, "DENIED_FULL"
-
-    # RULE 3: Is the user currently outside?
+    # RULE 2: Is the user currently outside?
     if card_data.get('is_Entry') == True:
         print("Result: DENIED - Repeated Entry")
         return False, "DENIED_REPEATED"
 
-    # RULE 4: Is the balance >= RM 20?
+    # RULE 3: Is the balance >= RM 20?
     balance = card_data.get('Balance', 0.0)
     if balance < 20.0:
         print(f"Result: DENIED - Insufficient Funds (RM {balance})")
@@ -146,6 +161,7 @@ def recalculate_available():
         total += available
 
     parking_state["TOTAL_AVAILABLE"] = total
+    lcd_display.show_default()
 
 
 def broadcast_state():
@@ -162,6 +178,13 @@ def broadcast_state():
         if q in clients:
             clients.remove(q)
 
+def set_alert(alert_type, zone, message):
+    parking_state["ALERT"] = {
+        "type": alert_type,
+        "zone": zone,
+        "message": message,
+        "timestamp": datetime.now().isoformat()
+    }
 
 def update_slot(zone, slot_id, status, distance):
     if zone not in parking_state["SLOTS"]:
@@ -170,17 +193,38 @@ def update_slot(zone, slot_id, status, distance):
     if slot_id not in parking_state["SLOTS"][zone]:
         return
 
+    previous_status = parking_state["SLOTS"][zone][slot_id]["status"]
+
     parking_state["SLOTS"][zone][slot_id]["status"] = status
     parking_state["SLOTS"][zone][slot_id]["distance"] = distance
 
     recalculate_available()
+    if previous_status != status:
+        lcd_display.show_slot_update(zone, slot_id, status)
+
     broadcast_state()
 
-    # print(f"[MQTT] {zone} {slot_id} -> {status} | distance={distance}")
-    # print(f"TOTAL_AVAILABLE = {parking_state['TOTAL_AVAILABLE']}")
-    # print(f"Zone_A = {parking_state['ZONE_AVAILABLE']['Zone_A']}")
-    # print(f"Zone_B = {parking_state['ZONE_AVAILABLE']['Zone_B']}")
+def update_illegal_parking(zone, illegal_detected, distance):
+    if zone not in parking_state["ILLEGAL_PARKING"]:
+        parking_state["ILLEGAL_PARKING"][zone] = {
+            "detected": False,
+            "distance": 0,
+            "message": ""
+        }
 
+    previous_detected = parking_state["ILLEGAL_PARKING"][zone]["detected"]
+
+    parking_state["ILLEGAL_PARKING"][zone]["detected"] = illegal_detected
+    parking_state["ILLEGAL_PARKING"][zone]["distance"] = distance
+
+    if illegal_detected and not previous_detected:
+        zone_label = zone.replace("_", " ")
+        set_alert("illegal_parking", zone, f"{zone_label} have illegal parking detected.")
+    elif (not illegal_detected) and previous_detected:
+        zone_label = zone.replace("_", " ")
+        set_alert("illegal_parking_cleared", zone, f"{zone_label} illegal parking cleared.")
+
+    broadcast_state()
 
 def on_connect(client, userdata, flags, rc):
     print("Connected to MQTT broker with code:", rc)
@@ -193,11 +237,22 @@ def on_message(client, userdata, msg):
         payload = json.loads(msg.payload.decode())
 
         zone = payload.get("zone")
+        if not zone:
+            print("Invalid MQTT payload, missing zone:", payload)
+            return
+
+        if "illegal_parking" in payload:
+            illegal_detected = bool(payload.get("illegal_parking", False))
+            distance = payload.get("distance", 0)
+
+            update_illegal_parking(zone, illegal_detected, distance)
+            return
+
         slot_id = payload.get("slot_id")
         status = payload.get("status")
         distance = payload.get("distance", 0)
 
-        if not zone or not slot_id or not status:
+        if not slot_id or not status:
             print("Invalid MQTT payload:", payload)
             return
 
@@ -213,3 +268,8 @@ def start_mqtt_listener():
     client.on_message = on_message
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_forever()
+
+def get_total_available():
+    return parking_state["TOTAL_AVAILABLE"]
+
+lcd_display.set_available_provider(get_total_available)
