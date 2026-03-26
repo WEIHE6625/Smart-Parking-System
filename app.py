@@ -2,7 +2,6 @@ from flask import Flask, request, render_template, redirect, url_for, session
 import threading
 from firebase_admin import db
 import paho.mqtt.client as mqtt
-
 from lcd import lcd_display
 
 from authentication import auth_bp
