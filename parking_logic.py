@@ -51,23 +51,18 @@ MQTT_PORT = 1883
 MQTT_TOPIC = "parking/+/+/status"
 
 # RFID module
-def rfid_validate_entry(card_data, total_available) -> tuple[bool, str]: 
+def rfid_validate_entry(card_data) -> tuple[bool, str]: 
     # RULE 1: Does the card exist?
     if card_data is None:
         print("Result: DENIED - Unregistered Card")
         return False, "DENIED_UNREGISTERED"
 
-    # RULE 2: Is the parking lot full?
-    if total_available <= 0:
-        print("Result: DENIED - Parking Lot Full")
-        return False, "DENIED_FULL"
-
-    # RULE 3: Is the user currently outside?
+    # RULE 2: Is the user currently outside?
     if card_data.get('is_Entry') == True:
         print("Result: DENIED - Repeated Entry")
         return False, "DENIED_REPEATED"
 
-    # RULE 4: Is the balance >= RM 20?
+    # RULE 3: Is the balance >= RM 20?
     balance = card_data.get('Balance', 0.0)
     if balance < 20.0:
         print(f"Result: DENIED - Insufficient Funds (RM {balance})")
@@ -208,11 +203,6 @@ def update_slot(zone, slot_id, status, distance):
         lcd_display.show_slot_update(zone, slot_id, status)
 
     broadcast_state()
-
-    # print(f"[MQTT] {zone} {slot_id} -> {status} | distance={distance}")
-    # print(f"TOTAL_AVAILABLE = {parking_state['TOTAL_AVAILABLE']}")
-    # print(f"Zone_A = {parking_state['ZONE_AVAILABLE']['Zone_A']}")
-    # print(f"Zone_B = {parking_state['ZONE_AVAILABLE']['Zone_B']}")
 
 def update_illegal_parking(zone, illegal_detected, distance):
     if zone not in parking_state["ILLEGAL_PARKING"]:

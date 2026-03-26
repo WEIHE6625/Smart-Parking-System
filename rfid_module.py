@@ -3,21 +3,10 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from firebase_admin import db
 
-from lcd import LCD
+from lcd import lcd_display
 from parking_logic import *
-from parking_logic import parking_state
 
 rfid_bp = Blueprint('rfid', __name__)
-display_lcd = LCD()
-
-def reset_lcd_to_default():
-    try:
-        zone_ref = db.reference('Parking_Zone')
-        zone_data = zone_ref.get()
-        total_available = zone_data.get('Total_Available_Parking', 0) if zone_data else 0
-        display_lcd.show_default(total_available)
-    except Exception as e:
-        print(f"Error resetting LCD: {e}")
 
 @rfid_bp.route('/rfid_entry', methods=['POST'])
 def rfid_entry():
@@ -31,32 +20,22 @@ def rfid_entry():
 
     card_ref = db.reference(f'Card/{scanned_uid}')
     card_data = card_ref.get()
-    zone_ref = db.reference('Parking_Zone')
-    zone_data = zone_ref.get()
-    total_available = zone_data.get('Total_Available_Parking', 0) if zone_data else 0
 
-    is_Valid, message = rfid_validate_entry(card_data, total_available)
+    is_Valid, message = rfid_validate_entry(card_data)
     balance = float(card_data.get('Balance', 0.0)) if card_data else 0.0
 
     if is_Valid:
-        display_lcd.show_success(balance, True, get_user_name(card_data))
+        lcd_display.show_success(balance, True, get_user_name(card_data))
         current_time = datetime.now().strftime("%Y-%m-%d:%H:%M:%S") 
 
         card_ref.update({
             'is_Entry': True,
             'Last_Entry_Time': current_time 
         })
-        
-        zone_ref.update({
-            'Total_Available_Parking': total_available - 1
-        })
-        
+
         print("Result: APPROVED - Gate Opening")
     else:
-        display_lcd.show_denied(message)
-    
-    # Start a background timer to reset the LCD to default after 3 seconds
-    threading.Timer(3.0, reset_lcd_to_default).start()
+        lcd_display.show_denied(message)
 
     return jsonify({"status": message}), 200
 
@@ -73,8 +52,6 @@ def rfid_exit():
 
     card_ref = db.reference(f'Card/{scanned_uid}')
     card_data = card_ref.get()
-    zone_ref = db.reference('Parking_Zone')
-    zone_data = zone_ref.get()
 
     isValid, message = rfid_validate_exit(card_data)
     
@@ -100,19 +77,11 @@ def rfid_exit():
         )
 
         # Fixed: Pass the newly calculated balance and capitalized False
-        display_lcd.show_success(new_balance, False, get_user_name(card_data), parking_state["TOTAL_AVAILABLE"])
-        
-        total_available = zone_data.get('Total_Available_Parking', 0) if zone_data else 0
-        zone_ref.update({
-            'Total_Available_Parking': total_available + 1
-        })
+        lcd_display.show_success(new_balance, False, get_user_name(card_data))
         
         print("Result: APPROVED - Gate Opening")
         
     else:
-        display_lcd.show_denied(message, parking_state["TOTAL_AVAILABLE"])
-
-    # Start a background timer to reset the LCD to default after 3 seconds
-    threading.Timer(3.0, reset_lcd_to_default).start()
+        lcd_display.show_denied(message)
 
     return jsonify({"status": message}), 200
