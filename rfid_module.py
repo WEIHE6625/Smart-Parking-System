@@ -25,8 +25,15 @@ def rfid_entry():
     balance = float(card_data.get('Balance', 0.0)) if card_data else 0.0
 
     if is_Valid:
-        lcd_display.show_success(balance, True, get_user_name(card_data))
         current_time = datetime.now().strftime("%Y-%m-%d:%H:%M:%S") 
+
+        parking_state["CARS_ROAMING"] += 1
+        def lcd_sequence():
+            lcd_display.show_success(balance, True, get_user_name(card_data))
+            lcd_display.start_roaming_loop()
+
+        # Run LCD sequence in the background so the Flask server can reply instantly
+        threading.Thread(target=lcd_sequence).start()
 
         card_ref.update({
             'is_Entry': True,

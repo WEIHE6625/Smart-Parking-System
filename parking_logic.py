@@ -10,6 +10,7 @@ from lcd import lcd_display
 
 parking_state = {
     "TOTAL_AVAILABLE": 4,
+    "CARS_ROAMING": 0,
     "ZONE_AVAILABLE": {
         "Zone_A": 2,
         "Zone_B": 2
@@ -153,7 +154,7 @@ def recalculate_available():
 
     for zone, slots in parking_state["SLOTS"].items():
         available = 0
-        for slot_id, slot_data in slots.items():
+        for _, slot_data in slots.items():
             if slot_data["status"] == "empty":
                 available += 1
 
@@ -194,14 +195,20 @@ def update_slot(zone, slot_id, status, distance):
         return
 
     previous_status = parking_state["SLOTS"][zone][slot_id]["status"]
-
-    parking_state["SLOTS"][zone][slot_id]["status"] = status
-    parking_state["SLOTS"][zone][slot_id]["distance"] = distance
-
-    recalculate_available()
     if previous_status != status:
+        parking_state["SLOTS"][zone][slot_id]["status"] = status
+        parking_state["SLOTS"][zone][slot_id]["distance"] = distance
+
+        if status == "occupied":
+            if parking_state.get("CARS_ROAMING", 0) > 0:
+                parking_state["CARS_ROAMING"] -= 1
+            lcd_display.interrupt_roaming()
+
+        recalculate_available()
+        
         lcd_display.show_slot_update(zone, slot_id, status)
 
+    # Always broadcast the updated state via websockets
     broadcast_state()
 
 def update_illegal_parking(zone, illegal_detected, distance):
@@ -272,4 +279,8 @@ def start_mqtt_listener():
 def get_total_available():
     return parking_state["TOTAL_AVAILABLE"]
 
+def get_roaming_count():                     # <--- ADD THIS
+    return parking_state.get("CARS_ROAMING", 0)
+
 lcd_display.set_available_provider(get_total_available)
+lcd_display.set_roaming_provider(get_roaming_count)
