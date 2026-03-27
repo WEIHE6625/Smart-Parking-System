@@ -12,7 +12,7 @@ class LCD:
         self._last_line1 = None
         self._last_line2 = None
         self._last_update_time = 0
-        self._min_update_gap = 0.2  # minimum gap between LCD writes
+        self._min_update_gap = 0.1  # minimum gap between LCD writes
         self.is_busy = False                 # <--- Added to protect welcome messages
         self.roaming_thread_active = False
 
@@ -40,11 +40,13 @@ class LCD:
             if elapsed < self._min_update_gap:
                 time.sleep(self._min_update_gap - elapsed)
             self.lcd.setCursor(0, 0)
+            time.sleep(0.01)
             self.lcd.write(line1)
 
-            time.sleep(0.05)
+            # time.sleep(0.05)
 
             self.lcd.setCursor(1, 0)
+            time.sleep(0.01)
             self.lcd.write(line2)
 
             self._last_line1 = line1
@@ -76,7 +78,7 @@ class LCD:
         line2 = f"RM{float(balance):.2f}"
         self._update_screen(greeting, line2)
 
-        time.sleep(2)
+        time.sleep(3)
         self.is_busy = False
         if not self.roaming_thread_active:
             self.show_default()
@@ -86,7 +88,7 @@ class LCD:
         short_msg = message.replace("DENIED_", "").replace("_", " ").title()
         self._update_screen("Access Denied!", short_msg)
 
-        time.sleep(2)
+        time.sleep(3)
         self.is_busy = False
             
         if not self.roaming_thread_active:
@@ -101,7 +103,7 @@ class LCD:
         def loop():
             while self.roaming_provider and self.roaming_provider() > 0:
                 if self.is_busy:
-                    time.sleep(0.1)
+                    time.sleep(0.5)
                     continue # Wait if LCD is showing "Welcome"
                     
                 # 1. Show Roaming for 3 seconds
@@ -132,6 +134,7 @@ class LCD:
         self._roaming_interrupt = True
 
     def show_slot_update(self, zone, slot_id, status):
+        if self.is_busy: return
         total_available = self._get_available_slot()
 
         short_slot = slot_id.replace("_", "")
