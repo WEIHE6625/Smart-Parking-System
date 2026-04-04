@@ -13,3 +13,8 @@ MOSI    23
 MISO    19
 
 RST     21
+
+For Servo Motor gate (Isaac):
+Servo Motor voltage ==> 5V
+Ultrasonic sensor voltage ==> 3.3V
+Move ultrasonic sensor back a bit, don't be too close

@@ -2,19 +2,28 @@
 #include <MFRC522.h>
 #include <WiFi.h>        
 #include <HTTPClient.h> 
+#include <ESP32Servo.h>
 
-const char* wifi_ssid = "B100M";
+const char* wifi_ssid = "B100M-T3";
 const char* wifi_password = "12345678";
 
 // Flask Server IP
-const char* serverName = "http://192.168.200.104:5000/rfid_entry"; 
+const char* serverName = "http://192.168.0.104:5000/rfid_entry"; 
 
 #define SS_PIN 5
 #define RST_PIN 21
 #define GREEN_LED 27
 #define RED_LED 25  
 #define BUZZER 32
+#define ULTRASONIC_TRIG 13
+#define ULTRASONIC_ECHO 34
+#define SERVO_PIN 15
+
+
 MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
+Servo entry_gate;
+
+int thresholdCM = 5;
 
 void setup_wifi() {
   delay(10);
@@ -41,6 +50,20 @@ void setup() {
   digitalWrite(RED_LED, HIGH);
   digitalWrite(BUZZER, LOW);
 
+  // Initialize ultrasonic sensor
+  pinMode(ULTRASONIC_TRIG, OUTPUT);
+  pinMode(ULTRASONIC_ECHO, INPUT);
+
+  //Initialize servo motor
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+
+  entry_gate.setPeriodHertz(50);    // Standard 50hz servo frequency
+  entry_gate.attach(SERVO_PIN, 500, 2400); // Attach with min/max pulse widths
+  entry_gate.write(50);
+
   // Connect to Wi-Fi
   setup_wifi();
 
@@ -48,8 +71,44 @@ void setup() {
 }
 
 
+
+bool car_is_blocking_gate() {
+  digitalWrite(ULTRASONIC_TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(ULTRASONIC_TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(ULTRASONIC_TRIG, LOW);
+
+  long duration = pulseIn(ULTRASONIC_ECHO, HIGH, 25000);
+  float distanceCM = duration * 0.0343 / 2;
+  Serial.println(distanceCM);
+  if(distanceCM > 0 && distanceCM < thresholdCM) {
+    return true; 
+  }
+  
+  return false;
+  
+
+}
+
+void detect_car_blocking_gate() {
+  while(car_is_blocking_gate()) {
+    Serial.println("Car is currently blocking gate. Waiting for car to move before closing");
+    delay(1000);
+  }
+}
+
+
+void gate_action() {
+  entry_gate.write(90);
+  delay(3000);
+  detect_car_blocking_gate();
+  entry_gate.write(0);
+}
 void approved() {
   Serial.println("Action: OPENING GATE");
+
+
   digitalWrite(RED_LED, LOW);
   digitalWrite(GREEN_LED, HIGH);
   
@@ -60,8 +119,9 @@ void approved() {
   digitalWrite(BUZZER, HIGH); 
   delay(150);
   digitalWrite(BUZZER, LOW);
+
+  gate_action();
   
-  delay(1050);
   digitalWrite(GREEN_LED, LOW);
   digitalWrite(RED_LED, HIGH);
 }
@@ -85,6 +145,7 @@ void denied() {
 
 void loop() {
   // Reset the loop if no new card present on the sensor/reader.
+  
   if (!rfid.PICC_IsNewCardPresent()){
     return;
   }
