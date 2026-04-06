@@ -22,7 +22,7 @@ app.register_blueprint(slot_bp)
 
 @app.route('/')
 def home():
-    lcd_display.show_default(parking_state.get("TOTAL_AVAILABLE"))
+    lcd_display.show_default()
     return redirect(url_for('auth.login'))
 
 @app.route('/dashboard')
