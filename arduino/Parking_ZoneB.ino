@@ -30,12 +30,12 @@ struct IllegalParkingSensor {
   float lastDistanceCm;
 };
 
-ParkingSlot zoneA[] = {
+ParkingSlot zoneB[] = {
   { "Zone_B", "Slot_B1", 26, 27, 19, 21, 8.0, false, false, 0, -1.0 },
   { "Zone_B", "Slot_B2", 17, 16, 23, 22, 8.0, false, false, 0, -1.0 }
 };
 
-const int SLOT_COUNT = sizeof(zoneA) / sizeof(zoneA[0]);
+const int SLOT_COUNT = sizeof(zoneB) / sizeof(zoneB[0]);
 
 IllegalParkingSensor illegalSensor = { "Zone_B", "Illegal_Line_B", 32, 33, 12.0, false, false, 0, -1.0 };
 
@@ -86,7 +86,7 @@ void connectWiFi() {
 
 void connectMQTT() {
   while (!mqttClient.connected()) {
-    String clientId = "ESP32-ZoneA-";
+    String clientId = "ESP32-ZoneB-";
     clientId += String((uint32_t)ESP.getEfuseMac(), HEX);
 
     Serial.print("Connecting to MQTT... ");
@@ -100,7 +100,7 @@ void connectMQTT() {
 
     if (connected) {
       Serial.println("connected");
-      mqttClient.publish("parking/Zone_A/system", "Zone A ESP32 online", true);
+      mqttClient.publish("parking/Zone_B/system", "Zone B ESP32 online", true);
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
@@ -381,7 +381,7 @@ void setup() {
   delay(1000);
 
   for (int i = 0; i < SLOT_COUNT; i++) {
-    setupPins(zoneA[i]);
+    setupPins(zoneB[i]);
   }
 
   setupIllegalSensorPins(illegalSensor);
@@ -395,9 +395,9 @@ void setup() {
   delay(500);
 
   for (int i = 0; i < SLOT_COUNT; i++) {
-    initializeSlotState(zoneA[i]);
-    reportSlotChange(zoneA[i]);
-    publishSlotStatus(zoneA[i]);
+    initializeSlotState(zoneB[i]);
+    reportSlotChange(zoneB[i]);
+    publishSlotStatus(zoneB[i]);
   }
 
   initializeIllegalParkingState(illegalSensor);
@@ -411,7 +411,7 @@ void loop() {
   unsigned long now = millis();
 
   for (int i = 0; i < SLOT_COUNT; i++) {
-    updateSlot(zoneA[i], now);
+    updateSlot(zoneB[i], now);
   }
 
   updateIllegalParking(illegalSensor, now);
