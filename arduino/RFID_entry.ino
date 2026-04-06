@@ -4,7 +4,7 @@
 #include <HTTPClient.h> 
 #include <ESP32Servo.h>
 
-const char* wifi_ssid = "B100M-T3";
+const char* wifi_ssid = "B100M-T4";
 const char* wifi_password = "12345678";
 
 // Flask Server IP
@@ -12,18 +12,22 @@ const char* serverName = "http://192.168.0.104:5000/rfid_entry";
 
 #define SS_PIN 5
 #define RST_PIN 21
-#define GREEN_LED 27
-#define RED_LED 25  
-#define BUZZER 32
-#define ULTRASONIC_TRIG 13
-#define ULTRASONIC_ECHO 34
-#define SERVO_PIN 15
+#define GREEN_LED 17
+#define RED_LED 16 
+#define BUZZER 15
+#define ULTRASONIC_TRIG 32
+#define ULTRASONIC_ECHO 35
+#define SERVO_PIN 13
 
 
 MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
 Servo entry_gate;
 
-int thresholdCM = 5;
+const int thresholdCM = 8;
+const int openAngle = 100;
+const int closeAngle = 10;
+const int motorMinPulse = 550;
+const int motorMaxPulse = 2400;
 
 void setup_wifi() {
   delay(10);
@@ -61,8 +65,9 @@ void setup() {
   ESP32PWM::allocateTimer(3);
 
   entry_gate.setPeriodHertz(50);    // Standard 50hz servo frequency
-  entry_gate.attach(SERVO_PIN, 500, 2400); // Attach with min/max pulse widths
-  entry_gate.write(50);
+  entry_gate.attach(SERVO_PIN, motorMinPulse, motorMaxPulse);
+  entry_gate.write(closeAngle);
+  delay(1000); 
 
   // Connect to Wi-Fi
   setup_wifi();
@@ -70,6 +75,25 @@ void setup() {
   Serial.println(F("Please put your RFID card / tag:"));
 }
 
+
+// A custom function to move the gate smoothly and stop bouncing
+void smooth_move(int currentAngle, int targetAngle) {
+  
+  // If we are moving UP
+  if (currentAngle < targetAngle) {
+    for (int pos = currentAngle; pos <= targetAngle; pos += 1) {
+      entry_gate.write(pos);
+      delay(5);
+    }
+  } 
+  // If we are moving DOWN
+  else {
+    for (int pos = currentAngle; pos >= targetAngle; pos -= 1) {
+      entry_gate.write(pos);
+      delay(5);
+    }
+  }
+}
 
 
 bool car_is_blocking_gate() {
@@ -87,8 +111,6 @@ bool car_is_blocking_gate() {
   }
   
   return false;
-  
-
 }
 
 void detect_car_blocking_gate() {
@@ -98,13 +120,15 @@ void detect_car_blocking_gate() {
   }
 }
 
-
 void gate_action() {
-  entry_gate.write(90);
+  smooth_move(closeAngle, openAngle);
   delay(3000);
   detect_car_blocking_gate();
-  entry_gate.write(0);
+  delay(1000);
+  smooth_move(openAngle, closeAngle);
+  delay(1000); 
 }
+
 void approved() {
   Serial.println("Action: OPENING GATE");
 

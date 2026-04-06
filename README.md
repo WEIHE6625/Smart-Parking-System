@@ -18,3 +18,4 @@ For Servo Motor gate (Isaac):
 Servo Motor voltage ==> 5V
 Ultrasonic sensor voltage ==> 3.3V
 Move ultrasonic sensor back a bit, don't be too close
+if servo motor got random vibration, adjust the servo_motor.attach(MIN_pulse, MAX_pulse) values, then use appropriate openAngles and closeAngles
