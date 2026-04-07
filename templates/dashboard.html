@@ -225,6 +225,17 @@
         </div>
     </div>
 
+        <div class="illegal-status">
+        <h2>Illegal Parking Status</h2>
+
+        <div id="illegalZoneB" class="illegal-item {% if parking_state.ILLEGAL_PARKING.Zone_B.detected %}illegal-detected{% else %}illegal-clear{% endif %}">
+            Zone B - {% if parking_state.ILLEGAL_PARKING.Zone_B.detected %}DETECTED{% else %}CLEAR{% endif %}
+            <span class="small">
+                Distance: {{ parking_state.ILLEGAL_PARKING.Zone_B.distance }} cm
+            </span>
+        </div>
+    </div>
+
     <div class="status-bar">
         Live connection: <span id="liveStatus">Connecting...</span>
     </div>

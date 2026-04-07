@@ -31,7 +31,7 @@ struct IllegalParkingSensor {
 };
 
 ParkingSlot zoneA[] = {
-  { "Zone_A", "Slot_A1", 26, 27, 19, 21, 8.0, false, false, 0, -1.0 },
+  { "Zone_A", "Slot_A1", 26, 27, 21, 19, 8.0, false, false, 0, -1.0 },
   { "Zone_A", "Slot_A2", 17, 16, 23, 22, 8.0, false, false, 0, -1.0 }
 };
 
@@ -39,8 +39,8 @@ const int SLOT_COUNT = sizeof(zoneA) / sizeof(zoneA[0]);
 
 IllegalParkingSensor illegalSensor = { "Zone_A", "Illegal_Line_A", 32, 33, 12.0, false, false, 0, -1.0 };
 
-const uint8_t BUZZER_PIN = 25;
-const uint8_t WARNING_LED_PIN = 14;
+const uint8_t BUZZER_PIN = 4;
+const uint8_t WARNING_LED_PIN = 15;
 
 const unsigned long BUZZER_ON_MS = 1000;
 const unsigned long BUZZER_OFF_MS = 800;
