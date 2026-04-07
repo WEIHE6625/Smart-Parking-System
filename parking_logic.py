@@ -153,15 +153,18 @@ def recalculate_available():
 
     for zone, slots in parking_state["SLOTS"].items():
         available = 0
-        for slot_id, slot_data in slots.items():
+        for _, slot_data in slots.items():
             if slot_data["status"] == "empty":
                 available += 1
 
         parking_state["ZONE_AVAILABLE"][zone] = available
         total += available
 
+    old_total = parking_state["TOTAL_AVAILABLE"]
     parking_state["TOTAL_AVAILABLE"] = total
-    lcd_display.show_default()
+
+    if old_total != total:
+        lcd_display.show_default()
 
 
 def broadcast_state():

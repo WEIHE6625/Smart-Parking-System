@@ -13,7 +13,7 @@ class LCD:
         self._last_line1 = None
         self._last_line2 = None
         self._last_update_time = 0
-        self._min_update_gap = 0.8
+        self._min_update_gap = 1.5
         self._worker = threading.Thread(target=self._worker_loop, daemon=True)
         self._worker.start()
 
@@ -44,16 +44,16 @@ class LCD:
                 time.sleep(self._min_update_gap - elapsed)
             try:
                 self.lcd.clear()
-                time.sleep(0.05)
+                time.sleep(0.2)
             except Exception:
                 pass
             self.lcd.setCursor(0, 0)
             self.lcd.write(line1)
-            time.sleep(0.08)
+            time.sleep(0.15)
 
             self.lcd.setCursor(1, 0)
             self.lcd.write(line2)
-            time.sleep(0.08)
+            time.sleep(0.15)
 
             self._last_line1 = line1
             self._last_line2 = line2
@@ -78,7 +78,8 @@ class LCD:
             self._queue.task_done()
 
     def show_default(self):
-        self._queue.put({"type": "default"})
+        if self._queue.empty():
+            self._queue.put({"type": "default"})
 
     def show_success(self, balance, is_entry, user_name, duration=2):
         if is_entry:
