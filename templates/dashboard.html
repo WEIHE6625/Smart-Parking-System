@@ -262,6 +262,7 @@
             updateSlot("Slot_B2", data.SLOTS.Zone_B.Slot_B2);
 
             updateIllegalZone("illegalZoneA", "Zone A", data.ILLEGAL_PARKING.Zone_A);
+            updateIllegalZone("illegalZoneB", "Zone B", data.ILLEGAL_PARKING.Zone_B);
             handleAlert(data.ALERT);
         };
 
@@ -302,9 +303,28 @@
             lastAlertTimestamp = alertData.timestamp;
 
             if (alertData.type === "illegal_parking") {
-                showToast(alertData.message || "Zone A have illegal parking detected.");
+                showToast(alertData.message || buildIllegalMessage(illegalParkingData));
             }
         }
+
+        function buildIllegalMessage(illegalParkingData) {
+            const detectedZones = [];
+
+            if (illegalParkingData?.Zone_A?.detected) {
+                detectedZones.push("Zone A");
+            }
+
+            if (illegalParkingData?.Zone_B?.detected) {
+                detectedZones.push("Zone B");
+            }
+
+            if (detectedZones.length === 0) {
+                return "Illegal parking detected.";
+            }
+
+            return `Illegal parking detected at ${detectedZones.join(" and ")}.`;
+        }
+
 
         function showToast(message) {
             const toast = document.getElementById("toast");
