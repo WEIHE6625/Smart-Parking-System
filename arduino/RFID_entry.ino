@@ -83,14 +83,14 @@ void smooth_move(int currentAngle, int targetAngle) {
   if (currentAngle < targetAngle) {
     for (int pos = currentAngle; pos <= targetAngle; pos += 1) {
       entry_gate.write(pos);
-      delay(5);
+      delay(8);
     }
   } 
   // If we are moving DOWN
   else {
     for (int pos = currentAngle; pos >= targetAngle; pos -= 1) {
       entry_gate.write(pos);
-      delay(5);
+      delay(8);
     }
   }
 }
@@ -122,7 +122,7 @@ void detect_car_blocking_gate() {
 
 void gate_action() {
   smooth_move(closeAngle, openAngle);
-  delay(3000);
+  delay(1000);
   detect_car_blocking_gate();
   delay(1000);
   smooth_move(openAngle, closeAngle);
