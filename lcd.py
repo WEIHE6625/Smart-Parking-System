@@ -1,5 +1,6 @@
 import time
 import threading
+import queue
 from grove.display.jhd1802 import JHD1802
 
 
@@ -8,11 +9,16 @@ class LCD:
         self.lcd = JHD1802()
         self.available_provider = None
         self._lock = threading.Lock()
+        self._queue = queue.Queue()
         self._last_line1 = None
         self._last_line2 = None
         self._last_update_time = 0
-        self._min_update_gap = 0.5  # minimum gap between LCD writes
+        self._min_update_gap = 0.8
+        self._worker = threading.Thread(target=self._worker_loop, daemon=True)
+        self._worker.start()
 
+    def set_available_provider(self, provider_func):
+        self.available_provider = provider_func
 
     def _get_available_slot(self):
         if self.available_provider is None:
@@ -25,7 +31,7 @@ class LCD:
     def _safe_text(self, text):
         return str(text)[:16].ljust(16)
 
-    def _update_screen(self, line1, line2=""):
+    def _write_now(self, line1, line2=""):
         line1 = self._safe_text(line1)
         line2 = self._safe_text(line2)
 
@@ -36,58 +42,66 @@ class LCD:
             elapsed = now - self._last_update_time
             if elapsed < self._min_update_gap:
                 time.sleep(self._min_update_gap - elapsed)
+            try:
+                self.lcd.clear()
+                time.sleep(0.05)
+            except Exception:
+                pass
             self.lcd.setCursor(0, 0)
             self.lcd.write(line1)
-
-            time.sleep(0.05)
+            time.sleep(0.08)
 
             self.lcd.setCursor(1, 0)
             self.lcd.write(line2)
+            time.sleep(0.08)
 
             self._last_line1 = line1
             self._last_line2 = line2
             self._last_update_time = time.time()
 
-    def set_available_provider(self, provider_func):
-        self.available_provider = provider_func
+    def _show_default_now(self):
+        available_slot = self._get_available_slot()
+        self._write_now("Parking System", f"Slot: {available_slot}")
+
+    def _worker_loop(self):
+        while True:
+            job = self._queue.get()
+
+            if job["type"] == "temp":
+                self._write_now(job["line1"], job["line2"])
+                time.sleep(job["duration"])
+                self._show_default_now()
+
+            elif job["type"] == "default":
+                self._show_default_now()
+
+            self._queue.task_done()
 
     def show_default(self):
-        available_slot = self._get_available_slot()
-        self._update_screen("Parking System", f"Slot: {available_slot}")
+        self._queue.put({"type": "default"})
 
-    def clear_and_default(self):
-        time.sleep(0.1)
-        self.show_default()
-
-    def show_success(self, balance, is_entry, user_name):
+    def show_success(self, balance, is_entry, user_name, duration=2):
         if is_entry:
             greeting = f"Welcome {user_name.capitalize()}!" if user_name else "Welcome!"
         else:
             greeting = f"Bye {user_name.capitalize()}!" if user_name else "Come Again!"
 
         line2 = f"RM{float(balance):.2f}"
-        self._update_screen(greeting, line2)
+        self._queue.put({
+            "type": "temp",
+            "line1": greeting,
+            "line2": line2,
+            "duration": duration
+        })
 
-        time.sleep(2)
-        self.show_default()
-
-    def show_denied(self, message):
+    def show_denied(self, message, duration=2):
         short_msg = message.replace("DENIED_", "").replace("_", " ").title()
-        self._update_screen("Access Denied!", short_msg)
-
-        time.sleep(2)
-        self.show_default()
-
-    def show_slot_update(self, zone, slot_id, status):
-        total_available = self._get_available_slot()
-
-        short_slot = slot_id.replace("_", "")
-        short_status = "Occupied" if status.lower() == "occupied" else "Empty"
-
-        self._update_screen(f"{short_slot} {short_status}", f"Slot: {total_available}")
-
-        time.sleep(2)
-        self.show_default()
+        self._queue.put({
+            "type": "temp",
+            "line1": "Access Denied!",
+            "line2": short_msg,
+            "duration": duration
+        })
 
 
 lcd_display = LCD()

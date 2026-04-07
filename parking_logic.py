@@ -199,9 +199,6 @@ def update_slot(zone, slot_id, status, distance):
     parking_state["SLOTS"][zone][slot_id]["distance"] = distance
 
     recalculate_available()
-    if previous_status != status:
-        lcd_display.show_slot_update(zone, slot_id, status)
-
     broadcast_state()
 
 def update_illegal_parking(zone, illegal_detected, distance):
