@@ -1,5 +1,5 @@
 # Smart-Parking-System
-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
+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
 
 Raspberry PI pip install problem:
 sudo pip3 install -r requirements.txt --break-system-packages
