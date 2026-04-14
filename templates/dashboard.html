@@ -97,46 +97,7 @@
             background: #c62828;
         }
 
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            min-width: 320px;
-            max-width: 420px;
-            background: #c62828;
-            color: white;
-            padding: 16px 18px;
-            border-radius: 10px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-            display: none;
-            z-index: 9999;
-            animation: slideIn 0.25s ease-out;
-        }
 
-        .toast.show {
-            display: block;
-        }
-
-        .toast h3 {
-            margin: 0 0 8px 0;
-            font-size: 18px;
-        }
-
-        .toast p {
-            margin: 0;
-            line-height: 1.4;
-        }
-
-        .toast button {
-            margin-top: 12px;
-            border: none;
-            background: white;
-            color: #c62828;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
 
         @keyframes slideIn {
             from {
@@ -152,12 +113,6 @@
 </head>
 <body>
     <h1>Realtime Parking Dashboard</h1>
-
-    <div id="toast" class="toast">
-        <h3>Warning</h3>
-        <p id="toastMessage">Illegal parking detected.</p>
-        <button onclick="hideToast()">Close</button>
-    </div>
 
     <div class="summary">
         <div class="card">
@@ -214,25 +169,20 @@
         </div>
     </div>
 
-    <div class="illegal-status">
-        <h2>Illegal Parking Status</h2>
 
-        <div id="illegalZoneA" class="illegal-item {% if parking_state.ILLEGAL_PARKING.Zone_A.detected %}illegal-detected{% else %}illegal-clear{% endif %}">
-            Zone A - {% if parking_state.ILLEGAL_PARKING.Zone_A.detected %}DETECTED{% else %}CLEAR{% endif %}
-            <span class="small">
-                Distance: {{ parking_state.ILLEGAL_PARKING.Zone_A.distance }} cm
-            </span>
+
+    <!-- ILLEGAL MESSAGE-->
+    <div id="illegalStatusContainer" class="illegal-status" style="display: none;">
+        <h2>Active Violations</h2>
+
+        <div id="illegalZoneA" class="illegal-item illegal-detected" style="display: none;">
+            Zone A1 & A2 - DETECTED
+            <span id="distA" class="small">Distance: 0 cm</span>
         </div>
-    </div>
 
-        <div class="illegal-status">
-        <h2>Illegal Parking Status</h2>
-
-        <div id="illegalZoneB" class="illegal-item {% if parking_state.ILLEGAL_PARKING.Zone_B.detected %}illegal-detected{% else %}illegal-clear{% endif %}">
-            Zone B - {% if parking_state.ILLEGAL_PARKING.Zone_B.detected %}DETECTED{% else %}CLEAR{% endif %}
-            <span class="small">
-                Distance: {{ parking_state.ILLEGAL_PARKING.Zone_B.distance }} cm
-            </span>
+        <div id="illegalZoneB" class="illegal-item illegal-detected" style="display: none;">
+            Slot B1 & B2 - DETECTED
+            <span id="distB" class="small">Distance: 0 cm</span>
         </div>
     </div>
 
@@ -243,7 +193,6 @@
     <script>
         const source = new EventSource("/stream");
         let lastAlertTimestamp = "";
-        let toastTimer = null;
 
         source.onopen = function () {
             document.getElementById("liveStatus").textContent = "Connected";
@@ -261,9 +210,10 @@
             updateSlot("Slot_B1", data.SLOTS.Zone_B.Slot_B1);
             updateSlot("Slot_B2", data.SLOTS.Zone_B.Slot_B2);
 
-            updateIllegalZone("illegalZoneA", "Zone A", data.ILLEGAL_PARKING.Zone_A);
-            updateIllegalZone("illegalZoneB", "Zone B", data.ILLEGAL_PARKING.Zone_B);
-            handleAlert(data.ALERT);
+            updateIllegalZone("illegalZoneA", "Slot A1 & A2", data.ILLEGAL_PARKING.Zone_A);
+            updateIllegalZone("illegalZoneB", "Slot B1 & B2", data.ILLEGAL_PARKING.Zone_B);
+            handleAlert(data);
+            updateIllegalDisplay(data.ILLEGAL_PARKING);
         };
 
         source.onerror = function () {
@@ -290,61 +240,105 @@
                 <span class="small">Distance: ${distance} cm</span>
             `;
         }
+        
 
-        function handleAlert(alertData) {
-            if (!alertData || !alertData.timestamp) {
-                return;
+
+
+
+        function handleAlert(data) {
+            // 1. Get the elements
+            const container = document.getElementById("illegalStatusContainer");
+            const elA = document.getElementById("illegalZoneA");
+            const elB = document.getElementById("illegalZoneB");
+            
+            // 2. Check the data safely
+            const isA = data.ILLEGAL_PARKING?.Zone_A?.detected || false;
+            const isB = data.ILLEGAL_PARKING?.Zone_B?.detected || false;
+
+            // 3. Toggle Zone A visibility
+            if (isA) {
+                elA.style.display = "block";
+                // Use the id we set in the previous step to update distance
+                const distA = document.querySelector("#illegalZoneA .small");
+                if(distA) distA.textContent = `Distance: ${data.ILLEGAL_PARKING.Zone_A.distance} cm`;
+            } else {
+                elA.style.display = "none";
             }
 
-            if (alertData.timestamp === lastAlertTimestamp) {
-                return;
+            // 4. Toggle Zone B visibility
+            if (isB) {
+                elB.style.display = "block";
+                const distB = document.querySelector("#illegalZoneB .small");
+                if(distB) distB.textContent = `Distance: ${data.ILLEGAL_PARKING.Zone_B.distance} cm`;
+            } else {
+                elB.style.display = "none";
             }
 
-            lastAlertTimestamp = alertData.timestamp;
-
-            if (alertData.type === "illegal_parking") {
-                showToast(alertData.message || buildIllegalMessage(illegalParkingData));
+            // 5. Toggle the main container visibility
+            if (isA || isB) {
+                container.style.display = "block";
+            } else {
+                container.style.display = "none";
             }
         }
 
-        function buildIllegalMessage(illegalParkingData) {
-            const detectedZones = [];
+        function showModal(message) {
+            const modal = document.getElementById("illegalModal");
+            const modalMessage = document.getElementById("modalMessage");
 
-            if (illegalParkingData?.Zone_A?.detected) {
-                detectedZones.push("Zone A");
-            }
-
-            if (illegalParkingData?.Zone_B?.detected) {
-                detectedZones.push("Zone B");
-            }
-
-            if (detectedZones.length === 0) {
-                return "Illegal parking detected.";
-            }
-
-            return `Illegal parking detected at ${detectedZones.join(" and ")}.`;
+            modalMessage.textContent = message;
+            modal.classList.add("show");
         }
 
 
-        function showToast(message) {
-            const toast = document.getElementById("toast");
-            const toastMessage = document.getElementById("toastMessage");
 
-            toastMessage.textContent = message;
-            toast.classList.add("show");
 
-            if (toastTimer) {
-                clearTimeout(toastTimer);
+        
+        function buildIllegalMessage(illegalData) {
+            let zones = [];
+            
+            if (illegalData.Zone_A.detected) zones.push("Slot A1 & A2");
+            if (illegalData.Zone_B.detected) zones.push("Zone B1 & B2");
+
+            // Returns "Zone A", "Zone B", or "Zone A and Zone B"
+            const locationText = zones.join(" and ");
+            
+            return `⚠️ Illegal Parking Detected at ${locationText}!`;
+        }
+        
+        function updateIllegalDisplay(illegalData) {
+            const container = document.getElementById("illegalStatusContainer");
+            const elA = document.getElementById("illegalZoneA");
+            const elB = document.getElementById("illegalZoneB");
+            
+            const isA = illegalData.Zone_A.detected;
+            const isB = illegalData.Zone_B.detected;
+
+            // 1. Update Distances and visibility for Zone A
+            if (isA) {
+                elA.style.display = "block";
+                document.getElementById("distA").textContent = `Distance: ${illegalData.Zone_A.distance} cm`;
+            } else {
+                elA.style.display = "none";
             }
 
-            toastTimer = setTimeout(() => {
-                hideToast();
-            }, 5000);
-        }
+            // 2. Update Distances and visibility for Zone B
+            if (isB) {
+                elB.style.display = "block";
+                document.getElementById("distB").textContent = `Distance: ${illegalData.Zone_B.distance} cm`;
+            } else {
+                elB.style.display = "none";
+            }
 
-        function hideToast() {
-            document.getElementById("toast").classList.remove("show");
+            // 3. Show main container only if A OR B is happening
+            if (isA || isB) {
+                container.style.display = "block";
+            } else {
+                container.style.display = "none";
+            }
         }
     </script>
 </body>
 </html>
+
+
