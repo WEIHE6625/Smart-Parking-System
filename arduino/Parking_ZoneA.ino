@@ -54,15 +54,15 @@ const char* WIFI_PASSWORD = "12345678";
 
 // Use your broker IP here
 // Example: if Mosquitto runs on same PC as Flask
-const char* MQTT_BROKER = "192.168.0.102";
-const int   MQTT_PORT   = 1883;
-const char* MQTT_USER = "";
-const char* MQTT_PASS = "";
+const char* MQTT_BROKER = "dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud";
+const int   MQTT_PORT   = 8883;
+const char* MQTT_USER = "zceping";
+const char* MQTT_PASS = "Tzp014588!";
 
 const unsigned long STABLE_TIME_MS = 1000;
 const unsigned long ECHO_TIMEOUT_US = 25000;
 
-WiFiClient espClient;
+WiFiClientSecure espClient;
 PubSubClient mqttClient(espClient);
 
 bool buzzerEnabled = false;
