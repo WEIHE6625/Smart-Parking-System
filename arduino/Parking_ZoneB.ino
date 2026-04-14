@@ -62,7 +62,7 @@ const int BUZZER_RESOLUTION = 8;
 // ── MOVED FROM ZONE A: Servo configuration ────────────────────────────────────
 const uint8_t SERVO_PIN        = 18;
 const int     SERVO_OPEN_DEG   = 90;
-const int     SERVO_CLOSED_DEG = 0;
+const int     SERVO_CLOSED_DEG = 15;
 
 Servo barrierServo;
 bool  servoOpen  = false;
@@ -76,7 +76,7 @@ const float   GATE_CLEAR_THRESHOLD_CM = 10.0;
 const unsigned long GATE_RECHECK_DELAY_MS = 3000;
 
 bool          gatePendingClose = false;
-unsigned long gatePendingSince = 0;
+unsigned long gatePendingSince = 0xFFFFFFFF;    // same — avoids wrap-around on first loop iteration
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── MOVED FROM ZONE A: Zone A slot status — updated via MQTT subscription ─────
@@ -85,10 +85,14 @@ const int ZONE_A_SLOT_COUNT = 2;   // ← match however many slots Zone A has
 bool zoneAOccupied[ZONE_A_SLOT_COUNT] = { false, false };
 // ─────────────────────────────────────────────────────────────────────────────
 
+const unsigned long GATE_CLOSE_DELAY_MS = 10000; // 10 seconds — adjust to your needs
+bool gateCloseScheduled = false;
+unsigned long gateCloseScheduledAt = 0xFFFFFFFF;  // init far in the past so first check never fires instantly
+
 const char* WIFI_SSID     = "B100M-T3";
 const char* WIFI_PASSWORD = "12345678";
 
-const char* MQTT_BROKER = "192.168.0.101";
+const char* MQTT_BROKER = "192.168.0.108";
 const int   MQTT_PORT   = 1883;
 const char* MQTT_USER   = "";
 const char* MQTT_PASS   = "";
@@ -380,8 +384,9 @@ void safeCloseGate() {
 
   if (!isGateClear()) {
     Serial.println("[GATE] Car detected under gate! Close CANCELLED - will retry in 3s");
-    gatePendingClose = true;
-    gatePendingSince = millis();
+    gatePendingClose    = true;
+    gatePendingSince    = millis();
+    gateCloseScheduled  = false;  // clear so retry goes through checkPendingGateClose only
     mqttClient.publish("parking/Zone_A/barrier/status",
       "{\"barrier\":\"open\",\"reason\":\"close_blocked_car_detected\"}", true);
   } else {
@@ -395,38 +400,126 @@ void safeCloseGate() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── NEW: scheduleGateEvaluation ───────────────────────────────────────────────
+// Called whenever Zone B slot state changes locally (from updateSlot).
+// Instead of calling updateServoForZoneA() directly — which would trigger
+// an immediate close — this function checks whether the gate SHOULD open
+// (which is still immediate) or whether a close should be scheduled
+// (which respects the 10-second delay).
+//
+// This fixes the bug where the last Zone B car leaving caused an immediate
+// gate close, bypassing the scheduled delay entirely.
+//
+void scheduleGateEvaluation() {
+  bool zoneAFull      = isZoneAFull();
+  bool anyZoneBActive = isAnyZoneBOccupied();
+
+  if (zoneAFull && !servoOpen) {
+    // Zone A is full → open immediately (no delay needed for opening)
+    updateServoForZoneA();
+
+  } else if (!zoneAFull && !anyZoneBActive && servoOpen) {
+    // Zone B just became empty and Zone A has space → schedule close with delay.
+    // Always reset the timer — if gateCloseScheduled was already true from a stale
+    // previous evaluation, the old timestamp would cause an instant close.
+    gateCloseScheduled   = true;
+    gateCloseScheduledAt = millis();
+    Serial.println("[SERVO] Zone B now empty - close scheduled in 10 seconds");
+    mqttClient.publish("parking/Zone_A/barrier/status",
+      "{\"barrier\":\"closing_soon\",\"reason\":\"zone_B_empty\"}", true);
+
+  } else if (!zoneAFull && anyZoneBActive && !servoOpen) {
+    // Zone B still has cars and gate is closed → open immediately
+    updateServoForZoneA();
+
+  } else if (anyZoneBActive && gateCloseScheduled) {
+    // A car re-entered Zone B during the wait → cancel the scheduled close
+    gateCloseScheduled = false;
+    Serial.println("[SERVO] Scheduled close cancelled - Zone B occupied again");
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── MOVED FROM ZONE A: Gate logic ─────────────────────────────────────────────
 void updateServoForZoneA() {
   bool zoneAFull      = isZoneAFull();
   bool anyZoneBActive = isAnyZoneBOccupied();
 
   if (zoneAFull && !servoOpen) {
+    // Condition 1 — Zone A full → open gate immediately
     Serial.println("[SERVO] Zone A FULL - opening barrier");
-    gatePendingClose = false;
+    gatePendingClose    = false;
+    gateCloseScheduled  = false;  // cancel any pending close
     smooth_move(SERVO_OPEN_DEG);
     servoOpen = true;
     mqttClient.publish("parking/Zone_A/barrier/status",
       "{\"barrier\":\"open\",\"reason\":\"zone_A_full\"}", true);
 
   } else if (!zoneAFull && !anyZoneBActive && servoOpen) {
-    Serial.println("[SERVO] Zone A has space & Zone B empty - attempting close");
-    safeCloseGate();
+    // Condition 2 — Zone A has space AND Zone B empty → schedule close after delay.
+    // Always reset the timer — a stale gateCloseScheduledAt would cause an instant close.
+    gateCloseScheduled   = true;
+    gateCloseScheduledAt = millis();
+    Serial.println("[SERVO] Zone B empty - close scheduled in 10 seconds");
+    mqttClient.publish("parking/Zone_A/barrier/status",
+      "{\"barrier\":\"closing_soon\",\"reason\":\"zone_B_empty\"}", true);
+    // Actual close happens in checkScheduledGateClose() in loop()
 
   } else if (!zoneAFull && anyZoneBActive && !servoOpen) {
+    // Condition 3 — Zone A has space BUT Zone B still occupied → keep open
     Serial.println("[SERVO] Zone A has space but Zone B occupied - barrier stays OPEN");
-    gatePendingClose = false;
+    gatePendingClose   = false;
+    gateCloseScheduled = false;  // cancel any scheduled close
     smooth_move(SERVO_OPEN_DEG);
     servoOpen = true;
     mqttClient.publish("parking/Zone_A/barrier/status",
       "{\"barrier\":\"open\",\"reason\":\"zone_B_still_occupied\"}", true);
+
+  } else {
+    // Conditions changed back (e.g. someone re-entered Zone B) — cancel scheduled close
+    if (gateCloseScheduled && anyZoneBActive) {
+      gateCloseScheduled = false;
+      Serial.println("[SERVO] Scheduled close cancelled - Zone B occupied again");
+    }
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+void checkScheduledGateClose(unsigned long now) {
+  // Always use fresh millis() — smooth_move() blocks ~1.5s, so the loop-captured
+  // `now` can be older than gateCloseScheduledAt. Unsigned subtraction then wraps
+  // to a huge value, making elapsed time look > 10s and triggering instant close.
+  unsigned long freshNow = millis();
+  if (!gateCloseScheduled) return;
+  if (freshNow - gateCloseScheduledAt < GATE_CLOSE_DELAY_MS) return;
+
+  // Double-check conditions are still valid before closing
+  bool zoneAFull      = isZoneAFull();
+  bool anyZoneBActive = isAnyZoneBOccupied();
+
+  if (!zoneAFull && !anyZoneBActive && servoOpen) {
+    Serial.println("[GATE] Close delay elapsed - attempting close");
+    gateCloseScheduled = false;
+    safeCloseGate();
+  } else {
+    // Conditions changed during the wait — cancel silently
+    Serial.println("[GATE] Scheduled close cancelled - conditions changed during wait");
+    gateCloseScheduled = false;
+  }
+}
+
 // ── MOVED FROM ZONE A: Pending close retry ───────────────────────────────────
 void checkPendingGateClose(unsigned long now) {
   if (!gatePendingClose) return;
-  if (now - gatePendingSince < GATE_RECHECK_DELAY_MS) return;
+  unsigned long freshNow = millis();  // use fresh time — same stale-now risk as checkScheduledGateClose
+  if (freshNow - gatePendingSince < GATE_RECHECK_DELAY_MS) return;
+
+  // Do NOT retry if the 10-second scheduled close hasn't elapsed yet.
+  // This prevents gatePendingClose from bypassing the intentional delay.
+  if (gateCloseScheduled && (freshNow - gateCloseScheduledAt < GATE_CLOSE_DELAY_MS)) {
+    Serial.println("[GATE] Pending close retry deferred - scheduled delay still active");
+    return;
+  }
 
   bool zoneAFull      = isZoneAFull();
   bool anyZoneBActive = isAnyZoneBOccupied();
@@ -566,7 +659,10 @@ void updateSlot(ParkingSlot &slot, unsigned long now) {
     applyLedState(slot);
     reportSlotChange(slot);
     publishSlotStatus(slot);
-    updateServoForZoneA(); // re-evaluate gate when Zone B occupancy changes
+    // Use scheduleGateEvaluation instead of calling updateServoForZoneA() directly.
+    // This ensures Zone B slot changes go through the same 10-second delay path
+    // as Zone A changes, so the gate never closes immediately when a Zone B car leaves.
+    scheduleGateEvaluation();
   }
 }
 
@@ -630,12 +726,16 @@ void setup() {
 
 void loop() {
   ensureConnections();
-
+  // Recapture now AFTER ensureConnections(). mqttClient.loop() inside it can trigger
+  // mqttCallback → updateServoForZoneA → smooth_move, which blocks for ~1.5 s.
+  // Any timestamp set inside that chain would be newer than a pre-ensureConnections now,
+  // causing unsigned subtraction wrap-around and a false "delay elapsed" result.
   unsigned long now = millis();
 
   for (int i = 0; i < SLOT_COUNT; i++) updateSlot(zoneB[i], now);
 
   updateIllegalParking(illegalSensor, now);
   updateBuzzer(now);
-  checkPendingGateClose(now);  // ← MOVED FROM ZONE A
+  checkScheduledGateClose(now);  // ← ADD THIS
+  checkPendingGateClose(now);
 }
