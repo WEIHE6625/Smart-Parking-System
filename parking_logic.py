@@ -53,7 +53,9 @@ MQTT_TOPIC = "parking/+/+/status"
 # RFID module
 def rfid_validate_entry(card_data) -> tuple[bool, str]: 
     # RULE 1: Does the card exist?
-    if card_data is None:
+    if card_data is not None: user_id = card_data.get('User_ID', None)
+
+    if card_data is None or user_id is None:
         print("Result: DENIED - Unregistered Card")
         return False, "DENIED_UNREGISTERED"
 
