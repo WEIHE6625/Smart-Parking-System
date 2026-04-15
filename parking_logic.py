@@ -1,6 +1,7 @@
 import math
 import time
 import json
+import ssl
 import paho.mqtt.client as mqtt
 
 from datetime import datetime

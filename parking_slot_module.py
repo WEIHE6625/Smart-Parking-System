@@ -26,4 +26,8 @@ def stream():
             if q in clients:
                 clients.remove(q)
 
-    return Response(event_stream(), mimetype="text/event-stream")
+    return Response(event_stream(), mimetype="text/event-stream", headers={
+            'X-Accel-Buffering': 'no',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive'
+        })
