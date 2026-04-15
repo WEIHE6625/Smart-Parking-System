@@ -16,6 +16,7 @@ def stream():
         q = Queue()
         clients.append(q)
 
+        # Send initial state
         yield f"data: {json.dumps(parking_state)}\n\n"
 
         try:
@@ -29,12 +30,14 @@ def stream():
                     # This prevents proxy buffering and forces the server to check 
                     # if the user has closed their browser tab!
                     yield ": keep-alive\n\n"
+                    
         except GeneratorExit:
             if q in clients:
                 clients.remove(q)
 
+    # Headers to stop Render from buffering
     return Response(event_stream(), mimetype="text/event-stream", headers={
-            'X-Accel-Buffering': 'no',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive'
-        })
+        'X-Accel-Buffering': 'no',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+    })
