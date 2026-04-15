@@ -22,8 +22,7 @@ def stream():
         try:
             while True:
                 try:
-                    # Wait for a max of 10 seconds instead of forever
-                    data = q.get(timeout=10)
+                    data = q.get(timeout=2)
                     yield f"data: {data}\n\n"
                 except Empty:
                     # If 10 seconds pass with no car movement, send an invisible heartbeat.
