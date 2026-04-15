@@ -5,7 +5,6 @@ import paho.mqtt.client as mqtt
 
 from datetime import datetime
 from firebase_admin import db
-from queue import Queue
 from lcd import lcd_display
 
 parking_state = {
@@ -197,8 +196,6 @@ def update_slot(zone, slot_id, status, distance):
 
     if slot_id not in parking_state["SLOTS"][zone]:
         return
-
-    previous_status = parking_state["SLOTS"][zone][slot_id]["status"]
 
     parking_state["SLOTS"][zone][slot_id]["status"] = status
     parking_state["SLOTS"][zone][slot_id]["distance"] = distance
