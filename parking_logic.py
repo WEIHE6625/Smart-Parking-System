@@ -173,6 +173,7 @@ def recalculate_available():
 
 def broadcast_state():
     data = json.dumps(parking_state)
+    mqtt_client.publish("parking/ui/full_state", data)
     dead_clients = []
 
     for q in clients:
