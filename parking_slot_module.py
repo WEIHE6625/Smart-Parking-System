@@ -22,7 +22,7 @@ def stream():
         try:
             while True:
                 try:
-                    data = q.get(timeout=2)
+                    data = q.get(timeout=5)
                     yield f"data: {data}\n\n"
                 except Empty:
                     # If 10 seconds pass with no car movement, send an invisible heartbeat.
@@ -35,7 +35,7 @@ def stream():
                 clients.remove(q)
 
     # Headers to stop Render from buffering
-    return Response(event_stream(), mimetype="text/event-stream", headers={
+    return Response(event_stream(), mimetype="text/event-stream", direct_passthrough=True, headers={
         'X-Accel-Buffering': 'no',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive'

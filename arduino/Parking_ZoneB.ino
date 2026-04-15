@@ -99,7 +99,7 @@ const int   MQTT_PORT   = 8883;
 const char* MQTT_USER = "zceping";
 const char* MQTT_PASS = "Tzp014588!";
 
-const unsigned long STABLE_TIME_MS  = 1000;
+const unsigned long STABLE_TIME_MS  = 3000;
 const unsigned long ECHO_TIMEOUT_US = 25000;
 
 WiFiClientSecure espClient; 

@@ -238,6 +238,8 @@ def on_message(client, userdata, msg):
     try:
         payload = json.loads(msg.payload.decode())
 
+        print(f"🔥 SENSOR DATA RECEIVED: {payload}", flush=True)
+        
         zone = payload.get("zone")
         if not zone:
             print("Invalid MQTT payload, missing zone:", payload)
