@@ -15,6 +15,9 @@ app = Flask(__name__)
 app.secret_key = "secretkey"
 init_firebase()
 
+mqtt_thread = threading.Thread(target=start_mqtt_listener, daemon=True)
+mqtt_thread.start()
+
 app.register_blueprint(auth_bp)
 app.register_blueprint(rfid_bp)
 app.register_blueprint(slot_bp)
@@ -62,8 +65,6 @@ def topup():
     
     return render_template('topup.html', balance=current_balance, card_id=user_card_id, success=success_msg)
 
-mqtt_thread = threading.Thread(target=start_mqtt_listener, daemon=True)
-mqtt_thread.start()
 lcd_display.connect_cloud_mqtt(
     broker="dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud",
     port=8883,
