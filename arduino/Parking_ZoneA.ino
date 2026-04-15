@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <PubSubClient.h>
 
@@ -62,7 +63,7 @@ const char* MQTT_PASS = "Tzp014588!";
 const unsigned long STABLE_TIME_MS = 1000;
 const unsigned long ECHO_TIMEOUT_US = 25000;
 
-WiFiClient espClient;
+WiFiClientSecure espClient; 
 PubSubClient mqttClient(espClient);
 
 bool buzzerEnabled = false;
@@ -392,6 +393,7 @@ void setup() {
   setupWarningLed();
 
   connectWiFi();
+  espClient.setInsecure();
   mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
   connectMQTT();
 

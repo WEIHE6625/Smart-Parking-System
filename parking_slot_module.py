@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, Response
 import json
-from queue import Queue
+from queue import Queue, Empty
 
 from parking_logic import parking_state, clients
 
@@ -20,8 +20,15 @@ def stream():
 
         try:
             while True:
-                data = q.get()
-                yield f"data: {data}\n\n"
+                try:
+                    # Wait for a max of 10 seconds instead of forever
+                    data = q.get(timeout=10)
+                    yield f"data: {data}\n\n"
+                except Empty:
+                    # If 10 seconds pass with no car movement, send an invisible heartbeat.
+                    # This prevents proxy buffering and forces the server to check 
+                    # if the user has closed their browser tab!
+                    yield ": keep-alive\n\n"
         except GeneratorExit:
             if q in clients:
                 clients.remove(q)
