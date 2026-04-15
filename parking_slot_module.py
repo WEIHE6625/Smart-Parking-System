@@ -16,25 +16,24 @@ def stream():
         q = Queue()
         clients.append(q)
 
-        # Send initial state
-        yield f"data: {json.dumps(parking_state)}\n\n"
+        # 1. ADD .encode() HERE
+        yield f"data: {json.dumps(parking_state)}\n\n".encode()
 
         try:
             while True:
                 try:
-                    data = q.get(timeout=5)
-                    yield f"data: {data}\n\n"
+                    data = q.get(timeout=2)
+                    # 2. ADD .encode() HERE
+                    yield f"data: {json.dumps(data) if isinstance(data, dict) else data}\n\n".encode()
                 except Empty:
-                    # If 10 seconds pass with no car movement, send an invisible heartbeat.
-                    # This prevents proxy buffering and forces the server to check 
-                    # if the user has closed their browser tab!
-                    yield ": keep-alive\n\n"
+                    # 3. ADD .encode() HERE
+                    yield ": keep-alive\n\n".encode()
                     
         except GeneratorExit:
             if q in clients:
                 clients.remove(q)
 
-    # Headers to stop Render from buffering
+    # Keep this exactly as you have it
     return Response(event_stream(), mimetype="text/event-stream", direct_passthrough=True, headers={
         'X-Accel-Buffering': 'no',
         'Cache-Control': 'no-cache',
