@@ -1,5 +1,6 @@
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <PubSubClient.h>
 #include <ESP32Servo.h>   // ← MOVED FROM ZONE A
@@ -93,15 +94,15 @@ unsigned long gateCloseScheduledAt = 0xFFFFFFFF;  // init far in the past so fir
 const char* WIFI_SSID     = "B100M-T3";
 const char* WIFI_PASSWORD = "12345678";
 
-const char* MQTT_BROKER = "192.168.0.100";
-const int   MQTT_PORT   = 1883;
-const char* MQTT_USER   = "";
-const char* MQTT_PASS   = "";
+const char* MQTT_BROKER = "dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud";
+const int   MQTT_PORT   = 8883;
+const char* MQTT_USER = "zceping";
+const char* MQTT_PASS = "Tzp014588!";
 
 const unsigned long STABLE_TIME_MS  = 1000;
 const unsigned long ECHO_TIMEOUT_US = 25000;
 
-WiFiClient   espClient;
+WiFiClientSecure espClient; 
 PubSubClient mqttClient(espClient);
 
 bool          buzzerEnabled    = false;
@@ -719,6 +720,7 @@ void setup() {
   setupServo();        // ← MOVED FROM ZONE A
 
   connectWiFi();
+  espClient.setInsecure();
   mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
   mqttClient.setCallback(mqttCallback);  // ← MOVED FROM ZONE A
   connectMQTT();

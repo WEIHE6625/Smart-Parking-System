@@ -45,8 +45,10 @@ parking_state = {
 
 clients = []
 
-MQTT_BROKER = "192.168.0.102"
-MQTT_PORT = 1883
+MQTT_BROKER = "dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud"
+MQTT_PORT = 8883
+MQTT_USER = "zceping"
+MQTT_PW = "Tzp014588!"
 MQTT_TOPIC = "parking/+/+/status"
 
 # RFID module
@@ -263,6 +265,8 @@ def on_message(client, userdata, msg):
 
 def start_mqtt_listener():
     client = mqtt.Client()
+    client.username_pw_set(MQTT_USER, MQTT_PW)
+    client.tls_set()  # Required for HiveMQ port 8883
     client.on_connect = on_connect
     client.on_message = on_message
     client.connect(MQTT_BROKER, MQTT_PORT, 60)

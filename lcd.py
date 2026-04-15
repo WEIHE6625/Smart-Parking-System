@@ -1,12 +1,11 @@
 import time
 import threading
 import queue
-from grove.display.jhd1802 import JHD1802
-
+import json
+import paho.mqtt.client as mqtt
 
 class LCD:
     def __init__(self):
-        self.lcd = JHD1802()
         self.available_provider = None
         self._lock = threading.Lock()
         self._queue = queue.Queue()
@@ -14,9 +13,16 @@ class LCD:
         self._last_line2 = None
         self._last_update_time = 0
         self._min_update_gap = 1.5
+        self.mqtt_client = mqtt.Client()
         self._worker = threading.Thread(target=self._worker_loop, daemon=True)
         self._worker.start()
 
+    def connect_cloud_mqtt(self, broker, port, user, pw):
+        self.mqtt_client.username_pw_set(user, pw)
+        self.mqtt_client.tls_set()
+        self.mqtt_client.connect(broker, port)
+        self.mqtt_client.loop_start()
+        
     def set_available_provider(self, provider_func):
         self.available_provider = provider_func
 
@@ -42,18 +48,9 @@ class LCD:
             elapsed = now - self._last_update_time
             if elapsed < self._min_update_gap:
                 time.sleep(self._min_update_gap - elapsed)
-            try:
-                self.lcd.clear()
-                time.sleep(0.2)
-            except Exception:
-                pass
-            self.lcd.setCursor(0, 0)
-            self.lcd.write(line1)
-            time.sleep(0.15)
 
-            self.lcd.setCursor(1, 0)
-            self.lcd.write(line2)
-            time.sleep(0.15)
+            payload = json.dumps({"line1": line1, "line2": line2})
+            self.mqtt_client.publish("parking/lcd/display", payload)
 
             self._last_line1 = line1
             self._last_line2 = line2
@@ -103,6 +100,5 @@ class LCD:
             "line2": short_msg,
             "duration": duration
         })
-
 
 lcd_display = LCD()
