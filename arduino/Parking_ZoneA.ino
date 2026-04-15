@@ -329,7 +329,6 @@ void initializeIllegalParkingState(IllegalParkingSensor &sensor) {
 
 void updateSlot(ParkingSlot &slot, unsigned long now) {
   float distance = readDistanceCmFiltered(slot.trigPin, slot.echoPin);
-  Serial.println(distance);
   if (distance < 0){
     distance = 999.0;
   };
@@ -352,7 +351,6 @@ void updateSlot(ParkingSlot &slot, unsigned long now) {
 
 void updateIllegalParking(IllegalParkingSensor &sensor, unsigned long now) {
   float distance = readDistanceCmFiltered(sensor.trigPin, sensor.echoPin);
-  Serial.println(distance);
   if (distance < 0){
     distance = 999.0;
   };

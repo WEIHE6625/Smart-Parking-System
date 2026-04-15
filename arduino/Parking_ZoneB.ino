@@ -63,7 +63,7 @@ const int BUZZER_RESOLUTION = 8;
 // ── MOVED FROM ZONE A: Servo configuration ────────────────────────────────────
 const uint8_t SERVO_PIN        = 18;
 const int     SERVO_OPEN_DEG   = 90;
-const int     SERVO_CLOSED_DEG = 15;
+const int     SERVO_CLOSED_DEG = 10;
 
 Servo barrierServo;
 bool  servoOpen  = false;
@@ -110,7 +110,7 @@ unsigned long buzzerLastToggle = 0;
 
 // ── MOVED FROM ZONE A: smooth_move ───────────────────────────────────────────
 void smooth_move(int targetAngle) {
-  barrierServo.attach(SERVO_PIN, 500, 2400);
+  barrierServo.attach(SERVO_PIN, 550, 2400);
 
   if (currentPos < targetAngle) {
     for (int pos = currentPos; pos <= targetAngle; pos++) {
@@ -656,7 +656,6 @@ void updateSlot(ParkingSlot &slot, unsigned long now) {
   if (!servoOpen) return;
   
   float distance = readDistanceCmFiltered(slot.trigPin, slot.echoPin);
-  Serial.println(distance);
   if (distance < 0){
     distance = 999.0;
   };
@@ -683,7 +682,6 @@ void updateSlot(ParkingSlot &slot, unsigned long now) {
 void updateIllegalParking(IllegalParkingSensor &sensor, unsigned long now) {
   if (!servoOpen) return;
   float distance = readDistanceCmFiltered(sensor.trigPin, sensor.echoPin);
-  Serial.println(distance);
   if (distance < 0){
     distance = 999.0;
   };
