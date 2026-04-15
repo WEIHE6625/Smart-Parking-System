@@ -48,13 +48,13 @@ const int BUZZER_FREQUENCY = 2000;
 const int BUZZER_CHANNEL = 0;
 const int BUZZER_RESOLUTION = 8;
 
-const char* WIFI_SSID = "B100M-T8";
+const char* WIFI_SSID = "B100M-T3";
 const char* WIFI_PASSWORD = "12345678";
 
 
 // Use your broker IP here
 // Example: if Mosquitto runs on same PC as Flask
-const char* MQTT_BROKER = "192.168.0.102";
+const char* MQTT_BROKER = "192.168.0.100";
 const int   MQTT_PORT   = 1883;
 const char* MQTT_USER = "";
 const char* MQTT_PASS = "";
@@ -329,7 +329,10 @@ void initializeIllegalParkingState(IllegalParkingSensor &sensor) {
 
 void updateSlot(ParkingSlot &slot, unsigned long now) {
   float distance = readDistanceCmFiltered(slot.trigPin, slot.echoPin);
-  if (distance < 0) return;
+  Serial.println(distance);
+  if (distance < 0){
+    distance = 999.0;
+  };
 
   slot.lastDistanceCm = distance;
   bool rawOccupied = isOccupied(distance, slot.occupiedThresholdCm);
@@ -349,7 +352,10 @@ void updateSlot(ParkingSlot &slot, unsigned long now) {
 
 void updateIllegalParking(IllegalParkingSensor &sensor, unsigned long now) {
   float distance = readDistanceCmFiltered(sensor.trigPin, sensor.echoPin);
-  if (distance < 0) return;
+  Serial.println(distance);
+  if (distance < 0){
+    distance = 999.0;
+  };
 
   sensor.lastDistanceCm = distance;
   bool rawIllegal = isIllegalParking(distance, sensor.illegalThresholdCm);

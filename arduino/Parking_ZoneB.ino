@@ -1,3 +1,4 @@
+
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <PubSubClient.h>
@@ -92,7 +93,7 @@ unsigned long gateCloseScheduledAt = 0xFFFFFFFF;  // init far in the past so fir
 const char* WIFI_SSID     = "B100M-T3";
 const char* WIFI_PASSWORD = "12345678";
 
-const char* MQTT_BROKER = "192.168.0.108";
+const char* MQTT_BROKER = "192.168.0.100";
 const int   MQTT_PORT   = 1883;
 const char* MQTT_USER   = "";
 const char* MQTT_PASS   = "";
@@ -336,8 +337,14 @@ void setupGateSensor() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 void applyLedState(const ParkingSlot &slot) {
-  digitalWrite(slot.redLedPin,   slot.occupied ? HIGH : LOW);
-  digitalWrite(slot.greenLedPin, slot.occupied ? LOW  : HIGH);
+  if (!servoOpen) {
+    digitalWrite(slot.redLedPin, LOW);
+    digitalWrite(slot.greenLedPin, LOW);
+  } 
+  else {
+    digitalWrite(slot.redLedPin,   slot.occupied ? HIGH : LOW);
+    digitalWrite(slot.greenLedPin, slot.occupied ? LOW  : HIGH);
+  }
 }
 
 // ── FIXED: ledcWriteTone replaced with digitalWrite ───────────────────────────
@@ -394,6 +401,9 @@ void safeCloseGate() {
     gatePendingClose = false;
     smooth_move(SERVO_CLOSED_DEG);
     servoOpen = false;
+    for (int i = 0; i < SLOT_COUNT; i++) {
+      applyLedState(zoneB[i]);
+    }
     mqttClient.publish("parking/Zone_A/barrier/status",
       "{\"barrier\":\"closed\",\"reason\":\"space_available_zone_B_empty\"}", true);
   }
@@ -643,8 +653,13 @@ void initializeIllegalParkingState(IllegalParkingSensor &sensor) {
 }
 
 void updateSlot(ParkingSlot &slot, unsigned long now) {
+  if (!servoOpen) return;
+  
   float distance = readDistanceCmFiltered(slot.trigPin, slot.echoPin);
-  if (distance < 0) return;
+  Serial.println(distance);
+  if (distance < 0){
+    distance = 999.0;
+  };
 
   slot.lastDistanceCm = distance;
   bool rawOccupied    = isOccupied(distance, slot.occupiedThresholdCm);
@@ -656,7 +671,6 @@ void updateSlot(ParkingSlot &slot, unsigned long now) {
 
   if (slot.occupied != slot.candidateOccupied && now - slot.candidateSince >= STABLE_TIME_MS) {
     slot.occupied = slot.candidateOccupied;
-    applyLedState(slot);
     reportSlotChange(slot);
     publishSlotStatus(slot);
     // Use scheduleGateEvaluation instead of calling updateServoForZoneA() directly.
@@ -667,8 +681,12 @@ void updateSlot(ParkingSlot &slot, unsigned long now) {
 }
 
 void updateIllegalParking(IllegalParkingSensor &sensor, unsigned long now) {
+  if (!servoOpen) return;
   float distance = readDistanceCmFiltered(sensor.trigPin, sensor.echoPin);
-  if (distance < 0) return;
+  Serial.println(distance);
+  if (distance < 0){
+    distance = 999.0;
+  };
 
   sensor.lastDistanceCm = distance;
   bool rawIllegal       = isIllegalParking(distance, sensor.illegalThresholdCm);
@@ -732,8 +750,10 @@ void loop() {
   // causing unsigned subtraction wrap-around and a false "delay elapsed" result.
   unsigned long now = millis();
 
-  for (int i = 0; i < SLOT_COUNT; i++) updateSlot(zoneB[i], now);
-
+  for (int i = 0; i < SLOT_COUNT; i++) {
+    updateSlot(zoneB[i], now);
+    applyLedState(zoneB[i]);
+  }
   updateIllegalParking(illegalSensor, now);
   updateBuzzer(now);
   checkScheduledGateClose(now);  // ← ADD THIS
