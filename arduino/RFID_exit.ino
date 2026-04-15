@@ -52,6 +52,9 @@ void setup() {
   digitalWrite(RED_LED, HIGH);
   digitalWrite(BUZZER, LOW);
 
+  pinMode(ULTRASONIC_TRIG, OUTPUT);
+  pinMode(ULTRASONIC_ECHO, INPUT);
+
   //Initialize servo motor
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);
