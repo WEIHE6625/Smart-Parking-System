@@ -23,7 +23,7 @@ const char* serverName = "http://192.168.0.104:5000/rfid_entry";
 MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
 Servo entry_gate;
 
-const int thresholdCM = 8;
+const int thresholdCM = 5;
 const int openAngle = 100;
 const int closeAngle = 10;
 const int motorMinPulse = 550;
