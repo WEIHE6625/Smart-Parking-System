@@ -1,14 +1,15 @@
 #include <SPI.h>
 #include <MFRC522.h>
 #include <WiFi.h>        
+#include <WiFiClientSecure.h> 
 #include <HTTPClient.h> 
 #include <ESP32Servo.h>
 
-const char* wifi_ssid = "B100M-T4";
+const char* wifi_ssid = "B100M-T3";
 const char* wifi_password = "12345678";
 
 // Flask Server IP
-const char* serverName = "http://192.168.0.104:5000/rfid_entry"; 
+const char* serverName = "https://smart-parking-system-ucb4.onrender.com/rfid_entry"; 
 
 #define SS_PIN 5
 #define RST_PIN 21
@@ -28,6 +29,7 @@ const int openAngle = 100;
 const int closeAngle = 10;
 const int motorMinPulse = 550;
 const int motorMaxPulse = 2400;
+
 
 void setup_wifi() {
   delay(10);
@@ -205,8 +207,11 @@ void loop() {
 
   // Send the HTTP POST request to Flask
   if(WiFi.status() == WL_CONNECTED){
+    WiFiClientSecure client;
+    client.setInsecure(); // Bypass SSL certificate verification
+
     HTTPClient http;
-    http.begin(serverName); 
+    http.begin(client, serverName); // Pass the secure client into the HTTP connection
     http.addHeader("Content-Type", "application/json");
     
     // Create a simple JSON payload
