@@ -17,7 +17,7 @@ def stream():
         clients.append(q)
 
         # Send initial state as a normal string (Flask converts it safely)
-        yield f"data: {json.dumps(parking_state)}\n\n".encode('utf-8'
+        yield f"data: {json.dumps(parking_state)}\n\n".encode('utf-8')
 
         try:
             while True:
