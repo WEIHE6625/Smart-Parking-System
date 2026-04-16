@@ -195,7 +195,10 @@
             };
 
             source.onmessage = function (event) {
+                console.log("RAW EVENT:", event.data);
+
                 const data = JSON.parse(event.data);
+                console.log("PARSED:", data);
                 // ... all your existing update logic stays the same ...
                 document.getElementById("totalAvailable").textContent = data.TOTAL_AVAILABLE;
                 document.getElementById("zoneAAvailable").textContent = data.ZONE_AVAILABLE.Zone_A;
