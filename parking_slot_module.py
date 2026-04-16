@@ -1,9 +1,7 @@
-from flask import Blueprint, jsonify, Response
+from flask import Blueprint, jsonify, Response, stream_with_context
 import json
 from queue import Queue, Empty
-
-# Import the whole module so the 'clients' list connects properly
-import parking_logic 
+import parking_logic
 
 slot_bp = Blueprint('slot', __name__)
 
@@ -13,31 +11,35 @@ def get_parking_state():
 
 @slot_bp.route('/stream')
 def stream():
+    @stream_with_context
     def event_stream():
         q = Queue()
         parking_logic.clients.append(q)
+        print(f"SSE client connected. Total clients: {len(parking_logic.clients)}", flush=True)
 
-        # Send initial state when dashboard first connects
-        yield f"data: {json.dumps(parking_logic.parking_state)}\n\n".encode('utf-8')
+        # Send CURRENT state immediately (this will have real data if MQTT already fired)
+        yield f"data: {json.dumps(parking_logic.parking_state)}\n\n"
 
         try:
             while True:
                 try:
-                    # Wait for broadcast_state() to put data in the queue
-                    data = q.get(timeout=2)
-                    
-                    # 'data' is already perfect JSON sent from broadcast_state!
-                    yield f"data: {data}\n\n".encode('utf-8')
-                    
+                    data = q.get(timeout=25)
+                    yield f"data: {data}\n\n"
                 except Empty:
-                    yield ": keep-alive\n\n".encode('utf-8')
-                    
+                    # Heartbeat to keep connection alive through proxies/load balancers
+                    yield ": heartbeat\n\n"
         except GeneratorExit:
+            print("SSE client disconnected.", flush=True)
             if q in parking_logic.clients:
                 parking_logic.clients.remove(q)
 
-    return Response(event_stream(), mimetype="text/event-stream", direct_passthrough=True, headers={
-        'X-Accel-Buffering': 'no',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-    })
+    return Response(
+        event_stream(),
+        mimetype="text/event-stream",
+        headers={
+            'X-Accel-Buffering': 'no',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Transfer-Encoding': 'chunked'
+        }
+    )

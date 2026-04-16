@@ -183,51 +183,52 @@
     </div>
 
     <script>
-        const source = new EventSource("/stream");
-        
-        // Track previous state so we only alert ONCE when it happens
-        let wasIllegalA = false;
-        let wasIllegalB = false;
+        function connectSSE() {
+            const source = new EventSource("/stream");
 
-        source.onopen = function () {
-            document.getElementById("liveStatus").textContent = "Connected";
-            document.getElementById("liveStatus").style.color = "#4caf50";
-        };
+            let wasIllegalA = false;
+            let wasIllegalB = false;
 
-        source.onmessage = function (event) {
-            const data = JSON.parse(event.data);
+            source.onopen = function () {
+                document.getElementById("liveStatus").textContent = "Connected";
+                document.getElementById("liveStatus").style.color = "#4caf50";
+            };
 
-            document.getElementById("totalAvailable").textContent = data.TOTAL_AVAILABLE;
-            document.getElementById("zoneAAvailable").textContent = data.ZONE_AVAILABLE.Zone_A;
-            document.getElementById("zoneBAvailable").textContent = data.ZONE_AVAILABLE.Zone_B;
+            source.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+                // ... all your existing update logic stays the same ...
+                document.getElementById("totalAvailable").textContent = data.TOTAL_AVAILABLE;
+                document.getElementById("zoneAAvailable").textContent = data.ZONE_AVAILABLE.Zone_A;
+                document.getElementById("zoneBAvailable").textContent = data.ZONE_AVAILABLE.Zone_B;
 
-            updateSlot("Slot_A1", data.SLOTS.Zone_A.Slot_A1);
-            updateSlot("Slot_A2", data.SLOTS.Zone_A.Slot_A2);
-            updateSlot("Slot_B1", data.SLOTS.Zone_B.Slot_B1);
-            updateSlot("Slot_B2", data.SLOTS.Zone_B.Slot_B2);
+                updateSlot("Slot_A1", data.SLOTS.Zone_A.Slot_A1);
+                updateSlot("Slot_A2", data.SLOTS.Zone_A.Slot_A2);
+                updateSlot("Slot_B1", data.SLOTS.Zone_B.Slot_B1);
+                updateSlot("Slot_B2", data.SLOTS.Zone_B.Slot_B2);
 
-            updateIllegalZone("illegalZoneA", "Slot A1 & A2", data.ILLEGAL_PARKING.Zone_A);
-            updateIllegalZone("illegalZoneB", "Slot B1 & B2", data.ILLEGAL_PARKING.Zone_B);
-            handleAlert(data);
+                updateIllegalZone("illegalZoneA", "Slot A1 & A2", data.ILLEGAL_PARKING.Zone_A);
+                updateIllegalZone("illegalZoneB", "Slot B1 & B2", data.ILLEGAL_PARKING.Zone_B);
+                handleAlert(data);
 
-            // --- NEW ALERT TRIGGER LOGIC ---
-            const isIllegalA = data.ILLEGAL_PARKING.Zone_A.detected;
-            const isIllegalB = data.ILLEGAL_PARKING.Zone_B.detected;
+                const isIllegalA = data.ILLEGAL_PARKING.Zone_A.detected;
+                const isIllegalB = data.ILLEGAL_PARKING.Zone_B.detected;
+                if ((isIllegalA && !wasIllegalA) || (isIllegalB && !wasIllegalB)) {
+                    showModal(buildIllegalMessage(data.ILLEGAL_PARKING));
+                }
+                wasIllegalA = isIllegalA;
+                wasIllegalB = isIllegalB;
+            };
 
-            // If it WASN'T illegal before, but it IS illegal now, show popup!
-            if ((isIllegalA && !wasIllegalA) || (isIllegalB && !wasIllegalB)) {
-                showModal(buildIllegalMessage(data.ILLEGAL_PARKING));
-            }
+            source.onerror = function () {
+                document.getElementById("liveStatus").textContent = "Reconnecting...";
+                document.getElementById("liveStatus").style.color = "#f44336";
+                source.close();
+                // Reconnect after 3 seconds
+                setTimeout(connectSSE, 3000);
+            };
+        }
 
-            // Update tracking variables for the next cycle
-            wasIllegalA = isIllegalA;
-            wasIllegalB = isIllegalB;
-        };
-
-        source.onerror = function () {
-            document.getElementById("liveStatus").textContent = "Disconnected / retrying...";
-            document.getElementById("liveStatus").style.color = "#f44336";
-        };
+        connectSSE();
 
         function updateSlot(slotId, slotData) {
             const el = document.getElementById(slotId);
