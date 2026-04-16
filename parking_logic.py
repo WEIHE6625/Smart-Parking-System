@@ -183,6 +183,7 @@ def broadcast_state():
             print(f"Broadcasted state to client: {data}", flush=True)
             print(f"Current clients: {len(clients)}", flush=True)
         except:
+            print("Error broadcasting to a client, marking as dead.", flush=True)
             dead_clients.append(q)
 
     for q in dead_clients:
