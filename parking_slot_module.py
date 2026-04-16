@@ -17,7 +17,7 @@ def stream():
         clients.append(q)
 
         # Send initial state as a normal string (Flask converts it safely)
-        yield f"data: {json.dumps(parking_state)}\n\n"
+        yield f"data: {json.dumps(parking_state)}\n\n".encode('utf-8'
 
         try:
             while True:
@@ -25,9 +25,9 @@ def stream():
                     data = q.get(timeout=2)
                     # Force double-quotes on data so JavaScript doesn't crash
                     data_str = json.dumps(data) if isinstance(data, dict) else data
-                    yield f"data: {data_str}\n\n"
+                    yield f"data: {data_str}\n\n".encode('utf-8')
                 except Empty:
-                    yield ": keep-alive\n\n"
+                    yield ": keep-alive\n\n".encode('utf-8')
                     
         except GeneratorExit:
             if q in clients:

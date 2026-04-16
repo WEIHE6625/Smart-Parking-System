@@ -230,7 +230,7 @@ def update_illegal_parking(zone, illegal_detected, distance):
 
     broadcast_state()
 
-def on_connect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, rc, properties=None):
     print("Connected to MQTT broker with code:", rc)
     client.subscribe(MQTT_TOPIC)
     print("Subscribed to:", MQTT_TOPIC)

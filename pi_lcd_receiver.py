@@ -7,7 +7,7 @@ from grove.display.jhd1802 import JHD1802
 # Initialize the physical LCD
 lcd = JHD1802()
 
-def on_connect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, rc, properties=None):
     print(f"Connected to HiveMQ with result code {rc}")
     client.subscribe("parking/lcd/display")
 
