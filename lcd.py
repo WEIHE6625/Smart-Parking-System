@@ -69,10 +69,10 @@ class LCD:
     def _worker_loop(self):
         while True:
             job = self._queue.get()
-            print(f"DEBUG: Worker picked up job type: {job['type']}")
+            print(f"DEBUG: Worker picked up job type: {job['type']}", flush=True)
 
             if job["type"] == "temp":
-                print(f"DEBUG: Attempting to publish TEMP: {job['line1']}")
+                print(f"DEBUG: Attempting to publish TEMP: {job['line1']}", flush=True)
                 self._is_showing_temp = True # Mark as busy
                 self._write_now(job["line1"], job["line2"])
                 time.sleep(job["duration"])
@@ -80,7 +80,7 @@ class LCD:
                 self._show_default_now()
 
             elif job["type"] == "default":
-                print(f"DEBUG: Attempting to publish DEFAULT: {job['line1']}")
+                print("DEBUG: Attempting to publish DEFAULT", flush=True)
                 if not self._is_showing_temp:
                     self._show_default_now()
 
