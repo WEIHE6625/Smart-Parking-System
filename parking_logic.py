@@ -179,8 +179,9 @@ def broadcast_state():
 
     for q in clients:
         try:
-            q.put(data, timeout=0.1)
+            q.put(data)
             print(f"Broadcasted state to client: {data}", flush=True)
+            print(f"Current clients: {len(clients)}", flush=True)
         except:
             dead_clients.append(q)
 
