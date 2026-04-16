@@ -14,8 +14,7 @@ app = Flask(__name__)
 app.secret_key = "secretkey"
 init_firebase()
 
-mqtt_thread = threading.Thread(target=start_mqtt_listener, daemon=True)
-mqtt_thread.start()
+threading.Thread(target=start_mqtt_listener, daemon=True).start()
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(rfid_bp)
