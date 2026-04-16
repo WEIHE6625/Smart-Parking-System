@@ -2,6 +2,7 @@ import time
 import threading
 import queue
 import json
+from unittest import result
 import paho.mqtt.client as mqtt
 
 class LCD:
@@ -53,6 +54,10 @@ class LCD:
             payload = json.dumps({"line1": line1, "line2": line2})
             self.mqtt_client.publish("parking/lcd/display", payload)
 
+            if result.rc == 0:
+                print(f"✅ SUCCESS: Message sent to HiveMQ: {line1}")
+            else:
+                print(f"❌ ERROR: MQTT failed to publish. Code: {result.rc}")
             self._last_line1 = line1
             self._last_line2 = line2
             self._last_update_time = time.time()
@@ -64,8 +69,10 @@ class LCD:
     def _worker_loop(self):
         while True:
             job = self._queue.get()
+            print(f"DEBUG: Worker picked up job type: {job['type']}")
 
             if job["type"] == "temp":
+                print(f"DEBUG: Attempting to publish TEMP: {job['line1']}")
                 self._is_showing_temp = True # Mark as busy
                 self._write_now(job["line1"], job["line2"])
                 time.sleep(job["duration"])
@@ -73,6 +80,7 @@ class LCD:
                 self._show_default_now()
 
             elif job["type"] == "default":
+                print(f"DEBUG: Attempting to publish DEFAULT: {job['line1']}")
                 if not self._is_showing_temp:
                     self._show_default_now()
 
