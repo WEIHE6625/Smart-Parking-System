@@ -376,7 +376,6 @@
                 useSSL: true,
                 userName: MQTT_USER,
                 password: MQTT_PW,
-                reconnect: true, // Let Paho handle minor network drops
                 onSuccess: function () {
                     console.log("Connected to MQTT Broker via WebSockets");
                     document.getElementById("liveStatus").textContent = "Connected";
