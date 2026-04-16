@@ -47,54 +47,41 @@
         .slot {
             margin: 10px 0;
             padding: 12px;
-            border-radius: 8px;
-            color: white;
+            border-radius: 6px;
             font-weight: bold;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .empty {
-            background: green;
-        }
-
-        .occupied {
-            background: red;
-        }
+        .empty { background: #4caf50; }
+        .occupied { background: #f44336; }
 
         .small {
-            display: block;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: normal;
-            margin-top: 4px;
-        }
-
-        .status-bar {
-            margin-top: 14px;
-            font-size: 14px;
-            color: #444;
-        }
-
-        .illegal-status {
-            margin-top: 24px;
-            background: white;
-            border-radius: 10px;
-            padding: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            background: rgba(0,0,0,0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
         }
 
         .illegal-item {
+            margin: 10px 0;
             padding: 12px;
-            border-radius: 8px;
-            margin-top: 10px;
+            border-radius: 6px;
             font-weight: bold;
-            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
+        
+        .illegal-clear { background: #e0e0e0; color: #333; }
+        .illegal-detected { background: #ff9800; color: white; animation: blink 1s infinite alternate; }
 
-        .illegal-clear {
-            background: #2e7d32;
-        }
-
-        .illegal-detected {
-            background: #c62828;
+        @keyframes blink {
+            from { opacity: 1; }
+            to { opacity: 0.7; }
         }
 
         /* Modal Background Overlay */
@@ -146,80 +133,46 @@
             display: flex;
         }
 
-
-
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-12px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
     </style>
 </head>
 <body>
-    <h1>Realtime Parking Dashboard</h1>
+    <h1>Smart Parking Dashboard</h1>
+    <p>Status: <span id="liveStatus" style="font-weight:bold; color: #1976d2;">Connecting...</span></p>
 
     <div class="summary">
         <div class="card">
             <h3>Total Available</h3>
-            <p id="totalAvailable">{{ parking_state.TOTAL_AVAILABLE }}</p>
-        </div>
-
-        <div class="card">
-            <h3>Zone A Available</h3>
-            <p id="zoneAAvailable">{{ parking_state.ZONE_AVAILABLE.Zone_A }}</p>
-        </div>
-
-        <div class="card">
-            <h3>Zone B Available</h3>
-            <p id="zoneBAvailable">{{ parking_state.ZONE_AVAILABLE.Zone_B }}</p>
+            <h2 id="totalAvailable">0</h2>
         </div>
     </div>
 
     <div class="zones">
         <div class="zone-box">
-            <h2>Zone A</h2>
-
-            <div id="Slot_A1" class="slot {{ parking_state.SLOTS.Zone_A.Slot_A1.status }}">
-                Slot_A1 - {{ parking_state.SLOTS.Zone_A.Slot_A1.status }}
-                <span class="small">
-                    Distance: {{ parking_state.SLOTS.Zone_A.Slot_A1.distance }} cm
-                </span>
-            </div>
-
-            <div id="Slot_A2" class="slot {{ parking_state.SLOTS.Zone_A.Slot_A2.status }}">
-                Slot_A2 - {{ parking_state.SLOTS.Zone_A.Slot_A2.status }}
-                <span class="small">
-                    Distance: {{ parking_state.SLOTS.Zone_A.Slot_A2.distance }} cm
-                </span>
-            </div>
+            <h2>Zone A (Slots: <span id="zoneAAvailable">0</span>)</h2>
+            <div id="Slot_A1" class="slot empty">Slot A1 - empty<span class="small">Distance: 0 cm</span></div>
+            <div id="Slot_A2" class="slot empty">Slot A2 - empty<span class="small">Distance: 0 cm</span></div>
         </div>
 
         <div class="zone-box">
-            <h2>Zone B</h2>
-
-            <div id="Slot_B1" class="slot {{ parking_state.SLOTS.Zone_B.Slot_B1.status }}">
-                Slot_B1 - {{ parking_state.SLOTS.Zone_B.Slot_B1.status }}
-                <span class="small">
-                    Distance: {{ parking_state.SLOTS.Zone_B.Slot_B1.distance }} cm
-                </span>
-            </div>
-
-            <div id="Slot_B2" class="slot {{ parking_state.SLOTS.Zone_B.Slot_B2.status }}">
-                Slot_B2 - {{ parking_state.SLOTS.Zone_B.Slot_B2.status }}
-                <span class="small">
-                    Distance: {{ parking_state.SLOTS.Zone_B.Slot_B2.distance }} cm
-                </span>
-            </div>
+            <h2>Zone B (Slots: <span id="zoneBAvailable">0</span>)</h2>
+            <div id="Slot_B1" class="slot empty">Slot B1 - empty<span class="small">Distance: 0 cm</span></div>
+            <div id="Slot_B2" class="slot empty">Slot B2 - empty<span class="small">Distance: 0 cm</span></div>
         </div>
     </div>
 
-
+    <div id="illegalStatusContainer" style="display: none; background: #ffebee; border: 2px solid #c62828; padding: 15px; border-radius: 8px; margin-top: 20px; max-width: 650px;">
+        <h3 style="color: #c62828; margin-top: 0;">🚨 Illegal Parking Status 🚨</h3>
+        
+        <div id="illegalZoneA" class="illegal-item illegal-clear">
+            Slot A1 & A2 - CLEAR
+            <span class="small">Distance: 0 cm</span>
+        </div>
+        
+        <div id="illegalZoneB" class="illegal-item illegal-clear">
+            Slot B1 & B2 - CLEAR
+            <span class="small">Distance: 0 cm</span>
+        </div>
+    </div>
 
     <div id="illegalModal" class="modal-overlay">
         <div class="modal-content">
@@ -227,10 +180,6 @@
             <p id="modalMessage" style="font-size: 18px; font-weight: bold;"></p>
             <button class="close-btn" onclick="closeModal()">Dismiss</button>
         </div>
-    </div>
-
-    <div class="status-bar">
-        Live connection: <span id="liveStatus">Connecting...</span>
     </div>
 
     <script>
@@ -242,6 +191,7 @@
 
         source.onopen = function () {
             document.getElementById("liveStatus").textContent = "Connected";
+            document.getElementById("liveStatus").style.color = "#4caf50";
         };
 
         source.onmessage = function (event) {
@@ -276,6 +226,7 @@
 
         source.onerror = function () {
             document.getElementById("liveStatus").textContent = "Disconnected / retrying...";
+            document.getElementById("liveStatus").style.color = "#f44336";
         };
 
         function updateSlot(slotId, slotData) {
@@ -308,7 +259,7 @@
             const isB = data.ILLEGAL_PARKING?.Zone_B?.detected || false;
 
             if (isA) {
-                elA.style.display = "block";
+                elA.style.display = "flex";
                 const distA = document.querySelector("#illegalZoneA .small");
                 if(distA) distA.textContent = `Distance: ${data.ILLEGAL_PARKING.Zone_A.distance} cm`;
             } else {
@@ -316,7 +267,7 @@
             }
 
             if (isB) {
-                elB.style.display = "block";
+                elB.style.display = "flex";
                 const distB = document.querySelector("#illegalZoneB .small");
                 if(distB) distB.textContent = `Distance: ${data.ILLEGAL_PARKING.Zone_B.distance} cm`;
             } else {
@@ -356,5 +307,3 @@
     </script>
 </body>
 </html>
-
-
