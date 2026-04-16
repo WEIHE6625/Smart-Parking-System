@@ -252,6 +252,8 @@ def on_message(client, userdata, msg):
             distance = payload.get("distance", 0)
 
             update_illegal_parking(zone, illegal_detected, distance)
+            for q in clients:
+                q.put(parking_state)
             return
 
         slot_id = payload.get("slot_id")
@@ -263,6 +265,9 @@ def on_message(client, userdata, msg):
             return
 
         update_slot(zone, slot_id, status, distance)
+
+        for q in clients:
+            q.put(parking_state)
 
     except Exception as e:
         print("MQTT message error:", e)
