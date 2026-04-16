@@ -16,6 +16,7 @@ class LCD:
         self.mqtt_client = mqtt.Client()
         self._worker = threading.Thread(target=self._worker_loop, daemon=True)
         self._worker.start()
+        self._is_showing_temp = False
 
     def connect_cloud_mqtt(self, broker, port, user, pw):
         self.mqtt_client.username_pw_set(user, pw)
@@ -65,12 +66,15 @@ class LCD:
             job = self._queue.get()
 
             if job["type"] == "temp":
+                self._is_showing_temp = True # Mark as busy
                 self._write_now(job["line1"], job["line2"])
                 time.sleep(job["duration"])
+                self._is_showing_temp = False # Mark as free
                 self._show_default_now()
 
             elif job["type"] == "default":
-                self._show_default_now()
+                if not self._is_showing_temp:
+                    self._show_default_now()
 
             self._queue.task_done()
 
@@ -79,6 +83,8 @@ class LCD:
             self._queue.put({"type": "default"})
 
     def show_success(self, balance, is_entry, user_name, duration=2):
+        with self._queue.mutex: # Clear pending default updates
+            self._queue.queue.clear()
         if is_entry:
             greeting = f"Welcome {user_name.capitalize()}!" if user_name else "Welcome!"
         else:
@@ -93,6 +99,8 @@ class LCD:
         })
 
     def show_denied(self, message, duration=2):
+        with self._queue.mutex: # Clear pending default updates
+            self._queue.queue.clear()
         short_msg = message.replace("DENIED_", "").replace("_", " ").title()
         self._queue.put({
             "type": "temp",
