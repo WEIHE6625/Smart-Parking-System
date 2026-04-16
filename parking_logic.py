@@ -180,6 +180,7 @@ def broadcast_state():
     for q in clients:
         try:
             q.put(data, timeout=0.1)
+            print(f"Broadcasted state to client: {data}", flush=True)
         except:
             dead_clients.append(q)
 
@@ -251,9 +252,7 @@ def on_message(client, userdata, msg):
             illegal_detected = bool(payload.get("illegal_parking", False))
             distance = payload.get("distance", 0)
 
-            update_illegal_parking(zone, illegal_detected, distance)
-            for q in clients:
-                q.put(parking_state)
+            update_illegal_parking(zone, illegal_detected, distance)  
             return
 
         slot_id = payload.get("slot_id")
@@ -265,9 +264,6 @@ def on_message(client, userdata, msg):
             return
 
         update_slot(zone, slot_id, status, distance)
-
-        for q in clients:
-            q.put(parking_state)
 
     except Exception as e:
         print("MQTT message error:", e)
