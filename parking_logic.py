@@ -2,6 +2,7 @@ import math
 import time
 import json
 import ssl
+import threading
 import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 
@@ -46,6 +47,7 @@ parking_state = {
 }
 
 clients = []
+clients_lock = threading.Lock()
 
 MQTT_BROKER = "dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud"
 MQTT_PORT = 8883
@@ -174,21 +176,22 @@ def recalculate_available():
 
 def broadcast_state():
     data = json.dumps(parking_state)
-    # mqtt_client.publish("parking/ui/full_state", data)
     dead_clients = []
 
-    for q in clients:
-        try:
-            q.put(data)
-            print(f"Broadcasted state to client: {data}", flush=True)
-            print(f"Current clients: {len(clients)}", flush=True)
-        except:
-            print("Error broadcasting to a client, marking as dead.", flush=True)
-            dead_clients.append(q)
+    with clients_lock:
+        print(f"Broadcasting to {len(clients)} clients", flush=True)
 
-    for q in dead_clients:
-        if q in clients:
-            clients.remove(q)
+        for q in list(clients):
+            try:
+                q.put_nowait(data)  # ✅ non-blocking
+            except Exception as e:
+                print(f"Broadcast error: {e}", flush=True)
+                dead_clients.append(q)
+
+        # Cleanup dead clients
+        for q in dead_clients:
+            if q in clients:
+                clients.remove(q)
 
 def set_alert(alert_type, zone, message):
     parking_state["ALERT"] = {
