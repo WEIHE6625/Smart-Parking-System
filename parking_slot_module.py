@@ -16,24 +16,24 @@ def stream():
         q = Queue()
         clients.append(q)
 
-        # 1. ADD .encode() HERE
-        yield f"data: {json.dumps(parking_state)}\n\n".encode()
+        # Send initial state as a normal string (Flask converts it safely)
+        yield f"data: {json.dumps(parking_state)}\n\n"
 
         try:
             while True:
                 try:
                     data = q.get(timeout=2)
-                    # 2. ADD .encode() HERE
-                    yield f"data: {json.dumps(data) if isinstance(data, dict) else data}\n\n".encode()
+                    # Force double-quotes on data so JavaScript doesn't crash
+                    data_str = json.dumps(data) if isinstance(data, dict) else data
+                    yield f"data: {data_str}\n\n"
                 except Empty:
-                    # 3. ADD .encode() HERE
-                    yield ": keep-alive\n\n".encode()
+                    yield ": keep-alive\n\n"
                     
         except GeneratorExit:
             if q in clients:
                 clients.remove(q)
 
-    # Keep this exactly as you have it
+    # REMOVED direct_passthrough=True. Kept Nginx buffering bypass headers.
     return Response(event_stream(), mimetype="text/event-stream", direct_passthrough=True, headers={
         'X-Accel-Buffering': 'no',
         'Cache-Control': 'no-cache',

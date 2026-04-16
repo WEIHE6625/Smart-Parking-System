@@ -3,6 +3,7 @@ import time
 import json
 import ssl
 import paho.mqtt.client as mqtt
+from paho.mqtt.enums import CallbackAPIVersion
 
 from datetime import datetime
 from firebase_admin import db
@@ -268,7 +269,7 @@ def on_message(client, userdata, msg):
 
 
 def start_mqtt_listener():
-    client = mqtt.Client()
+    client = mqtt.Client(CallbackAPIVersion.VERSION2)
     client.username_pw_set(MQTT_USER, MQTT_PW)
     client.tls_set()  # Required for HiveMQ port 8883
     client.on_connect = on_connect

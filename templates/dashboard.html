@@ -97,6 +97,56 @@
             background: #c62828;
         }
 
+        /* Modal Background Overlay */
+        .modal-overlay {
+            display: none; 
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Modal Box */
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .modal-content h2 {
+            color: #c62828;
+            margin-top: 0;
+        }
+
+        .close-btn {
+            margin-top: 20px;
+            background: #c62828;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .close-btn:hover {
+            background: #b71c1c;
+        }
+
+        /* Class to show the modal */
+        .modal-overlay.show {
+            display: flex;
+        }
+
+
 
 
         @keyframes slideIn {
@@ -171,18 +221,11 @@
 
 
 
-    <!-- ILLEGAL MESSAGE-->
-    <div id="illegalStatusContainer" class="illegal-status" style="display: none;">
-        <h2>Active Violations</h2>
-
-        <div id="illegalZoneA" class="illegal-item illegal-detected" style="display: none;">
-            Zone A1 & A2 - DETECTED
-            <span id="distA" class="small">Distance: 0 cm</span>
-        </div>
-
-        <div id="illegalZoneB" class="illegal-item illegal-detected" style="display: none;">
-            Slot B1 & B2 - DETECTED
-            <span id="distB" class="small">Distance: 0 cm</span>
+    <div id="illegalModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>🚨 WARNING 🚨</h2>
+            <p id="modalMessage" style="font-size: 18px; font-weight: bold;"></p>
+            <button class="close-btn" onclick="closeModal()">Dismiss</button>
         </div>
     </div>
 
@@ -192,7 +235,10 @@
 
     <script>
         const source = new EventSource("/stream");
-        let lastAlertTimestamp = "";
+        
+        // Track previous state so we only alert ONCE when it happens
+        let wasIllegalA = false;
+        let wasIllegalB = false;
 
         source.onopen = function () {
             document.getElementById("liveStatus").textContent = "Connected";
@@ -213,7 +259,19 @@
             updateIllegalZone("illegalZoneA", "Slot A1 & A2", data.ILLEGAL_PARKING.Zone_A);
             updateIllegalZone("illegalZoneB", "Slot B1 & B2", data.ILLEGAL_PARKING.Zone_B);
             handleAlert(data);
-            updateIllegalDisplay(data.ILLEGAL_PARKING);
+
+            // --- NEW ALERT TRIGGER LOGIC ---
+            const isIllegalA = data.ILLEGAL_PARKING.Zone_A.detected;
+            const isIllegalB = data.ILLEGAL_PARKING.Zone_B.detected;
+
+            // If it WASN'T illegal before, but it IS illegal now, show popup!
+            if ((isIllegalA && !wasIllegalA) || (isIllegalB && !wasIllegalB)) {
+                showModal(buildIllegalMessage(data.ILLEGAL_PARKING));
+            }
+
+            // Update tracking variables for the next cycle
+            wasIllegalA = isIllegalA;
+            wasIllegalB = isIllegalB;
         };
 
         source.onerror = function () {
@@ -240,32 +298,23 @@
                 <span class="small">Distance: ${distance} cm</span>
             `;
         }
-        
-
-
-
 
         function handleAlert(data) {
-            // 1. Get the elements
             const container = document.getElementById("illegalStatusContainer");
             const elA = document.getElementById("illegalZoneA");
             const elB = document.getElementById("illegalZoneB");
             
-            // 2. Check the data safely
             const isA = data.ILLEGAL_PARKING?.Zone_A?.detected || false;
             const isB = data.ILLEGAL_PARKING?.Zone_B?.detected || false;
 
-            // 3. Toggle Zone A visibility
             if (isA) {
                 elA.style.display = "block";
-                // Use the id we set in the previous step to update distance
                 const distA = document.querySelector("#illegalZoneA .small");
                 if(distA) distA.textContent = `Distance: ${data.ILLEGAL_PARKING.Zone_A.distance} cm`;
             } else {
                 elA.style.display = "none";
             }
 
-            // 4. Toggle Zone B visibility
             if (isB) {
                 elB.style.display = "block";
                 const distB = document.querySelector("#illegalZoneB .small");
@@ -274,12 +323,22 @@
                 elB.style.display = "none";
             }
 
-            // 5. Toggle the main container visibility
             if (isA || isB) {
                 container.style.display = "block";
             } else {
                 container.style.display = "none";
             }
+        }
+
+        // --- POPUP MODAL FUNCTIONS ---
+
+        function buildIllegalMessage(illegalData) {
+            let zones = [];
+            if (illegalData.Zone_A.detected) zones.push("Slot A1 & A2");
+            if (illegalData.Zone_B.detected) zones.push("Zone B1 & B2");
+            
+            const locationText = zones.join(" and ");
+            return `Illegal Parking Detected at ${locationText}!`;
         }
 
         function showModal(message) {
@@ -290,52 +349,9 @@
             modal.classList.add("show");
         }
 
-
-
-
-        
-        function buildIllegalMessage(illegalData) {
-            let zones = [];
-            
-            if (illegalData.Zone_A.detected) zones.push("Slot A1 & A2");
-            if (illegalData.Zone_B.detected) zones.push("Zone B1 & B2");
-
-            // Returns "Zone A", "Zone B", or "Zone A and Zone B"
-            const locationText = zones.join(" and ");
-            
-            return `⚠️ Illegal Parking Detected at ${locationText}!`;
-        }
-        
-        function updateIllegalDisplay(illegalData) {
-            const container = document.getElementById("illegalStatusContainer");
-            const elA = document.getElementById("illegalZoneA");
-            const elB = document.getElementById("illegalZoneB");
-            
-            const isA = illegalData.Zone_A.detected;
-            const isB = illegalData.Zone_B.detected;
-
-            // 1. Update Distances and visibility for Zone A
-            if (isA) {
-                elA.style.display = "block";
-                document.getElementById("distA").textContent = `Distance: ${illegalData.Zone_A.distance} cm`;
-            } else {
-                elA.style.display = "none";
-            }
-
-            // 2. Update Distances and visibility for Zone B
-            if (isB) {
-                elB.style.display = "block";
-                document.getElementById("distB").textContent = `Distance: ${illegalData.Zone_B.distance} cm`;
-            } else {
-                elB.style.display = "none";
-            }
-
-            // 3. Show main container only if A OR B is happening
-            if (isA || isB) {
-                container.style.display = "block";
-            } else {
-                container.style.display = "none";
-            }
+        // Function to hide the modal when "Dismiss" is clicked
+        function closeModal() {
+            document.getElementById("illegalModal").classList.remove("show");
         }
     </script>
 </body>

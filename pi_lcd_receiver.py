@@ -1,4 +1,5 @@
 import paho.mqtt.client as mqtt
+from paho.mqtt.enums import CallbackAPIVersion
 import json
 import time
 from grove.display.jhd1802 import JHD1802
@@ -24,7 +25,7 @@ def on_message(client, userdata, msg):
     except Exception as e:
         print(f"Error processing message: {e}")
 
-client = mqtt.Client()
+client = mqtt.Client(CallbackAPIVersion.VERSION2)
 # Use your HiveMQ Cloud Credentials
 client.username_pw_set("zceping", "Tzp014588!")
 client.tls_set()
