@@ -46,14 +46,14 @@ parking_state = {
     }
 }
 
-clients = []
-clients_lock = threading.Lock()
-
 MQTT_BROKER = "dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud"
 MQTT_PORT = 8883
 MQTT_USER = "zceping"
 MQTT_PW = "Tzp014588!"
 MQTT_TOPIC = "parking/+/+/status"
+MQTT_WEB_TOPIC = "parking/full_state"  # The new topic we publish to for the web frontend
+
+mqtt_client = None  # Global MQTT client variable
 
 # RFID module
 def rfid_validate_entry(card_data) -> tuple[bool, str]: 
@@ -173,25 +173,18 @@ def recalculate_available():
     if old_total != total:
         lcd_display.show_default()
 
-
 def broadcast_state():
+    # Publish the updated parking state to MQTT instead of using SSE queues
+    global mqtt_client
     data = json.dumps(parking_state)
-    dead_clients = []
 
-    with clients_lock:
-        print(f"Broadcasting to {len(clients)} clients", flush=True)
-
-        for q in list(clients):
-            try:
-                q.put_nowait(data)  # ✅ non-blocking
-            except Exception as e:
-                print(f"Broadcast error: {e}", flush=True)
-                dead_clients.append(q)
-
-        # Cleanup dead clients
-        for q in dead_clients:
-            if q in clients:
-                clients.remove(q)
+    if mqtt_client is not None:
+        try:
+            # retain=True ensures newly connected dashboards instantly receive the latest state
+            mqtt_client.publish(MQTT_WEB_TOPIC, data, retain=True)
+            print(f"State broadcasted to MQTT topic: {MQTT_WEB_TOPIC}", flush=True)
+        except Exception as e:
+            print(f"MQTT Broadcast error: {e}", flush=True)
 
 def set_alert(alert_type, zone, message):
     parking_state["ALERT"] = {
@@ -241,7 +234,6 @@ def on_connect(client, userdata, flags, rc, properties=None):
     client.subscribe(MQTT_TOPIC)
     print("Subscribed to:", MQTT_TOPIC)
 
-
 def on_message(client, userdata, msg):
     try:
         payload = json.loads(msg.payload.decode())
@@ -258,7 +250,6 @@ def on_message(client, userdata, msg):
             distance = payload.get("distance", 0)
 
             update_illegal_parking(zone, illegal_detected, distance) 
-            broadcast_state() 
             return
 
         slot_id = payload.get("slot_id")
@@ -271,19 +262,19 @@ def on_message(client, userdata, msg):
 
         update_slot(zone, slot_id, status, distance)
 
-        broadcast_state()
     except Exception as e:
         print("MQTT message error:", e)
 
-
 def start_mqtt_listener():
-    client = mqtt.Client(CallbackAPIVersion.VERSION2)
-    client.username_pw_set(MQTT_USER, MQTT_PW)
-    client.tls_set()  # Required for HiveMQ port 8883
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    client.loop_forever()
+    global mqtt_client
+    mqtt_client = mqtt.Client(CallbackAPIVersion.VERSION2)
+    mqtt_client.username_pw_set(MQTT_USER, MQTT_PW)
+    mqtt_client.tls_set()  # Required for HiveMQ port 8883
+    mqtt_client.on_connect = on_connect
+    mqtt_client.on_message = on_message
+    
+    mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    mqtt_client.loop_forever()
 
 def get_total_available():
     return parking_state["TOTAL_AVAILABLE"]

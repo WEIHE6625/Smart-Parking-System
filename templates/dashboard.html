@@ -134,6 +134,7 @@
         }
 
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
 </head>
 <body>
     <h1>Smart Parking Dashboard</h1>
@@ -182,7 +183,7 @@
         </div>
     </div>
 
-    <script>
+    <!-- <script>
         function connectSSE() {
             const source = new EventSource("/stream");
 
@@ -305,6 +306,167 @@
         }
 
         // Function to hide the modal when "Dismiss" is clicked
+        function closeModal() {
+            document.getElementById("illegalModal").classList.remove("show");
+        }
+    </script> -->
+    <script>
+        // HiveMQ Cloud WebSocket connection details
+        const MQTT_BROKER = "dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud";
+        const MQTT_PORT = 8884; // 8884 is the HiveMQ Cloud port for Secure WebSockets
+        const MQTT_USER = "zceping";
+        const MQTT_PW = "Tzp014588!";
+        const MQTT_TOPIC = "parking/full_state";
+        
+        // Generate a random client ID
+        const clientId = "web_dashboard_" + Math.random().toString(16).substr(2, 8);
+        const client = new Paho.MQTT.Client(MQTT_BROKER, MQTT_PORT, "/mqtt", clientId);
+
+        let wasIllegalA = false;
+        let wasIllegalB = false;
+
+        client.onConnectionLost = function (responseObject) {
+            if (responseObject.errorCode !== 0) {
+                console.log("Connection Lost: " + responseObject.errorMessage);
+                document.getElementById("liveStatus").textContent = "Reconnecting...";
+                document.getElementById("liveStatus").style.color = "#f44336";
+                // Attempt to reconnect after 3 seconds
+                setTimeout(connectMQTT, 3000);
+            }
+        };
+
+        client.onMessageArrived = function (message) {
+            console.log("RAW MQTT EVENT:", message.payloadString);
+            
+            try {
+                const data = JSON.parse(message.payloadString);
+                console.log("PARSED:", data);
+                
+                document.getElementById("totalAvailable").textContent = data.TOTAL_AVAILABLE;
+                document.getElementById("zoneAAvailable").textContent = data.ZONE_AVAILABLE.Zone_A;
+                document.getElementById("zoneBAvailable").textContent = data.ZONE_AVAILABLE.Zone_B;
+
+                updateSlot("Slot_A1", data.SLOTS.Zone_A.Slot_A1);
+                updateSlot("Slot_A2", data.SLOTS.Zone_A.Slot_A2);
+                updateSlot("Slot_B1", data.SLOTS.Zone_B.Slot_B1);
+                updateSlot("Slot_B2", data.SLOTS.Zone_B.Slot_B2);
+
+                updateIllegalZone("illegalZoneA", "Slot A1 & A2", data.ILLEGAL_PARKING.Zone_A);
+                updateIllegalZone("illegalZoneB", "Slot B1 & B2", data.ILLEGAL_PARKING.Zone_B);
+                handleAlert(data);
+
+                const isIllegalA = data.ILLEGAL_PARKING.Zone_A.detected;
+                const isIllegalB = data.ILLEGAL_PARKING.Zone_B.detected;
+                
+                if ((isIllegalA && !wasIllegalA) || (isIllegalB && !wasIllegalB)) {
+                    showModal(buildIllegalMessage(data.ILLEGAL_PARKING));
+                }
+                wasIllegalA = isIllegalA;
+                wasIllegalB = isIllegalB;
+            } catch (e) {
+                console.error("Error parsing MQTT payload", e);
+            }
+        };
+
+        function connectMQTT() {
+            document.getElementById("liveStatus").textContent = "Connecting MQTT...";
+            document.getElementById("liveStatus").style.color = "#ff9800";
+
+            const options = {
+                useSSL: true,
+                userName: MQTT_USER,
+                password: MQTT_PW,
+                reconnect: true, // Let Paho handle minor network drops
+                onSuccess: function () {
+                    console.log("Connected to MQTT Broker via WebSockets");
+                    document.getElementById("liveStatus").textContent = "Connected";
+                    document.getElementById("liveStatus").style.color = "#4caf50";
+                    client.subscribe(MQTT_TOPIC);
+                },
+                onFailure: function (error) {
+                    console.log("Connection failed", error);
+                    document.getElementById("liveStatus").textContent = "Failed. Retrying...";
+                    document.getElementById("liveStatus").style.color = "#f44336";
+                    setTimeout(connectMQTT, 3000);
+                }
+            };
+
+            client.connect(options);
+        }
+
+        // Initialize Connection
+        connectMQTT();
+
+        // --- UI UPDATE FUNCTIONS (Unchanged) ---
+        function updateSlot(slotId, slotData) {
+            const el = document.getElementById(slotId);
+            el.className = "slot " + slotData.status;
+            el.innerHTML = `
+                ${slotId} - ${slotData.status}
+                <span class="small">Distance: ${slotData.distance} cm</span>
+            `;
+        }
+
+        function updateIllegalZone(elementId, zoneLabel, illegalData) {
+            const el = document.getElementById(elementId);
+            const detected = illegalData && illegalData.detected;
+            const distance = illegalData ? illegalData.distance : 0;
+
+            el.className = "illegal-item " + (detected ? "illegal-detected" : "illegal-clear");
+            el.innerHTML = `
+                ${zoneLabel} - ${detected ? "DETECTED" : "CLEAR"}
+                <span class="small">Distance: ${distance} cm</span>
+            `;
+        }
+
+        function handleAlert(data) {
+            const container = document.getElementById("illegalStatusContainer");
+            const elA = document.getElementById("illegalZoneA");
+            const elB = document.getElementById("illegalZoneB");
+            
+            const isA = data.ILLEGAL_PARKING?.Zone_A?.detected || false;
+            const isB = data.ILLEGAL_PARKING?.Zone_B?.detected || false;
+
+            if (isA) {
+                elA.style.display = "flex";
+                const distA = document.querySelector("#illegalZoneA .small");
+                if(distA) distA.textContent = `Distance: ${data.ILLEGAL_PARKING.Zone_A.distance} cm`;
+            } else {
+                elA.style.display = "none";
+            }
+
+            if (isB) {
+                elB.style.display = "flex";
+                const distB = document.querySelector("#illegalZoneB .small");
+                if(distB) distB.textContent = `Distance: ${data.ILLEGAL_PARKING.Zone_B.distance} cm`;
+            } else {
+                elB.style.display = "none";
+            }
+
+            if (isA || isB) {
+                container.style.display = "block";
+            } else {
+                container.style.display = "none";
+            }
+        }
+
+        function buildIllegalMessage(illegalData) {
+            let zones = [];
+            if (illegalData.Zone_A.detected) zones.push("Slot A1 & A2");
+            if (illegalData.Zone_B.detected) zones.push("Zone B1 & B2");
+            
+            const locationText = zones.join(" and ");
+            return `Illegal Parking Detected at ${locationText}!`;
+        }
+
+        function showModal(message) {
+            const modal = document.getElementById("illegalModal");
+            const modalMessage = document.getElementById("modalMessage");
+
+            modalMessage.textContent = message;
+            modal.classList.add("show");
+        }
+
         function closeModal() {
             document.getElementById("illegalModal").classList.remove("show");
         }
