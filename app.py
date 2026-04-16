@@ -1,7 +1,6 @@
 from flask import Flask, request, render_template, redirect, url_for, session
 import threading
 from firebase_admin import db
-import paho.mqtt.client as mqtt
 from lcd import lcd_display
 
 from authentication import auth_bp
@@ -72,5 +71,5 @@ lcd_display.connect_cloud_mqtt(
     pw="Tzp014588!"
 )
 
-# if __name__ == '__main__':
-#     app.run(host='0.0.0.0', port=5000)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
