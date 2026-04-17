@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!--<link rel="stylesheet" href="C:\Users\Taruc\Documents\GitHub\Smart-Parking-System\static\styles.css">-->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
@@ -29,36 +30,59 @@
             <div class = "live-section">
                 <div class="status-row">
                         
-                        <div class="card">
-                            <h3 style="margin-top: 0; color: #555;"><i class="fas fa-parking" style="color: #1976d2;"></i> Total Available</h3>
-                            <div style="display: flex; align-items: baseline; justify-content: center; gap: 5px;">
-                                <h2 id="totalAvailable" style="margin: 0; font-size: 48px;">0</h2>
-                                <span style="color: #888; font-size: 18px;">/ 4</span>
-                            </div>
-                            <div style="width: 100%; background: #e0e0e0; height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
-                                <div id="availabilityBar" style="width: 0%; height: 100%; background: #2e7d32; transition: all 0.5s ease;"></div>
-                            </div>
+                    <div class="card">
+                        <h3 style="margin-top: 0; color: #555;"><i class="fas fa-parking" style="color: #1976d2;"></i> Total Available</h3>
+                        <div style="display: flex; align-items: baseline; justify-content: center; gap: 5px;">
+                            <h2 id="totalAvailable" style="margin: 0; font-size: 48px;">0</h2>
+                            <span style="color: #888; font-size: 18px;">/ 4</span>
                         </div>
-
-                        <div class="zone-box">
-                            <h2 style="margin-top: 0; font-size: 20px;">Zone A (Slots: <span id="zoneAAvailable">0</span>)</h2>
-                            <div class="slot-grid">
-                                <div id="Slot_A1" class="slot empty">...</div>
-                                <div id="Slot_A2" class="slot empty">...</div>
-                            </div>
+                        <div style="width: 100%; background: #e0e0e0; height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
+                            <div id="availabilityBar" style="width: 0%; height: 100%; background: #2e7d32; transition: all 0.5s ease;"></div>
                         </div>
-
-                        <div class="zone-box">
-                            <h2 style="margin-top: 0; font-size: 20px;">Zone B (Slots: <span id="zoneBAvailable">0</span>)</h2>
-                            <div class="slot-grid">
-                                <div id="Slot_B1" class="slot empty">...</div>
-                                <div id="Slot_B2" class="slot empty">...</div>
-                            </div>
-                        </div>
-
                     </div>
 
-                <div id="illegalStatusContainer" style="display: none; background: #ffebee; border: 2px solid #c62828; padding: 15px; border-radius: 8px; margin-top: 20px; max-width: 650px;">
+                    <div class="zone-box" id="zoneABox">
+                        <h2 style="margin-top: 0; font-size: 20px;">Zone A (Slots: <span id="zoneAAvailable">0</span>)</h2>
+                        <div class="slot-grid">
+                            
+                            <div id="Slot_A1" class="slot empty">
+                                <i class="fas fa-check-circle fa-2x" style="margin-bottom: 8px; opacity: 0.5;"></i>
+                                <div style="font-weight: 700; font-size: 16px;">Slot A1</div>
+                                <div style="font-size: 13px; margin-top: 4px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">AVAILABLE</div>
+                            </div>
+                            
+                            <div id="Slot_A2" class="slot empty">
+                                <i class="fas fa-check-circle fa-2x" style="margin-bottom: 8px; opacity: 0.5;"></i>
+                                <div style="font-weight: 700; font-size: 16px;">Slot A2</div>
+                                <div style="font-size: 13px; margin-top: 4px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">AVAILABLE</div>
+                            </div>
+                            
+                        </div>
+                    </div>
+
+                    <div class="zone-box" id="zoneBBox">
+                        <h2 style="margin-top: 0; font-size: 20px;">Zone B (Slots: <span id="zoneBAvailable">0</span>)</h2>
+                        <div class="slot-grid">
+                            
+                            <div id="Slot_B1" class="slot empty">
+                                <i class="fas fa-check-circle fa-2x" style="margin-bottom: 8px; opacity: 0.5;"></i>
+                                <div style="font-weight: 700; font-size: 16px;">Slot B1</div>
+                                <div style="font-size: 13px; margin-top: 4px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">AVAILABLE</div>
+                            </div>
+                            
+                            <div id="Slot_B2" class="slot empty">
+                                <i class="fas fa-check-circle fa-2x" style="margin-bottom: 8px; opacity: 0.5;"></i>
+                                <div style="font-weight: 700; font-size: 16px;">Slot B2</div>
+                                <div style="font-size: 13px; margin-top: 4px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">AVAILABLE</div>
+                            </div>
+                            
+                        </div>
+                    </div>
+
+
+                </div>
+
+                <div id="illegalStatusContainer">
                     <h3 style="color: #c62828; margin-top: 0;">🚨 Illegal Parking Status 🚨</h3>
                     
                     <div id="illegalZoneA" class="illegal-item illegal-clear">
@@ -219,6 +243,9 @@
 
                 const isIllegalA = data.ILLEGAL_PARKING.Zone_A.detected;
                 const isIllegalB = data.ILLEGAL_PARKING.Zone_B.detected;
+
+                document.getElementById("zoneABox").classList.toggle("zone-illegal", isIllegalA);
+                document.getElementById("zoneBBox").classList.toggle("zone-illegal", isIllegalB);
                 
                 if ((isIllegalA && !wasIllegalA) || (isIllegalB && !wasIllegalB)) {
                     showModal(buildIllegalMessage(data.ILLEGAL_PARKING));
@@ -303,20 +330,25 @@
         // Initialize Connection
         connectMQTT();
 
-        // --- UI UPDATE FUNCTIONS (Unchanged) ---
         function updateSlot(slotId, slotData) {
             const el = document.getElementById(slotId);
             
-            // Check if it's occupied to change the icon
             const icon = slotData.status === 'occupied' 
                 ? '<i class="fas fa-car fa-2x" style="margin-bottom: 8px;"></i>' 
                 : '<i class="fas fa-check-circle fa-2x" style="margin-bottom: 8px; opacity: 0.5;"></i>';
 
+            const statusText = slotData.status === 'occupied' ? 'Occupied' : 'Available';
+            
+            const cleanSlotId = slotId.replace('_', ' ');
+
             el.className = "slot " + slotData.status;
+            
             el.innerHTML = `
                 ${icon}
-                <div>${slotId}</div>
-                <div class="distance-badge">${slotData.distance} cm</div>
+                <div style="font-weight: 700; font-size: 16px;">${cleanSlotId}</div>
+                <div style="font-size: 13px; margin-top: 4px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">
+                    ${statusText}
+                </div>
             `;
         }
 

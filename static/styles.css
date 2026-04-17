@@ -302,3 +302,35 @@ canvas {
 .pulse {
     animation: pulseUpdate 0.4s ease-out;
 }
+
+#illegalStatusContainer {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    background: white;
+    border-left: 6px solid #ff9800; /* Orange accent */
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 20px;
+    width: 320px;
+    animation: slideInRight 0.4s ease-out;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.zone-illegal {
+    background-color: #fff3e0 !important; /* Light orange background */
+    border: 2px solid #ff9800 !important; /* Orange border */
+    box-shadow: 0 0 15px rgba(255, 152, 0, 0.4) !important;
+    animation: pulseOrange 1.5s infinite alternate;
+}
+
+@keyframes pulseOrange {
+    from { box-shadow: 0 0 5px rgba(255, 152, 0, 0.3); }
+    to { box-shadow: 0 0 20px rgba(255, 152, 0, 0.6); }
+}
