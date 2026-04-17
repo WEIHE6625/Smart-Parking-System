@@ -71,7 +71,20 @@ class LCD:
         print("State 2")
         payload = json.dumps({"line1": line1, "line2": line2}) 
         print(f"Publishing to MQTT: {payload}", flush=True) 
-        self.mqtt_client.publish("parking/lcd/display", payload)
+
+        # 1. Send with QoS 1 (Guaranteed Delivery)
+        msg_info = self.mqtt_client.publish("parking/lcd/display", payload, qos=1)
+        
+        # 2. Wait up to 2 seconds for HiveMQ to acknowledge
+        try:
+            msg_info.wait_for_publish(timeout=2.0)
+            if msg_info.is_published():
+                print(f"[PID {os.getpid()}] MQTT Publish SUCCESS and confirmed by HiveMQ!", flush=True)
+            else:
+                print(f"[PID {os.getpid()}] MQTT Publish FAILED: Timeout! The network thread is dead.", flush=True)
+        except Exception as e:
+            print(f"[PID {os.getpid()}] MQTT Publish ERROR: {e}", flush=True)
+
         print("State 3")
 
         with self._lock:
@@ -127,7 +140,7 @@ class LCD:
             self._queue.put({"type": "default"})
             # self._log_queue_state()
 
-    def show_success(self, balance, is_entry, user_name, duration=2):
+    def show_success(self, balance, is_entry, user_name, duration=8):
         self._ensure_worker_alive()
         print(f"DEBUG [show_success]: Called on instance pid={os.getpid()}", flush=True)
         with self._queue.mutex: # Clear pending default updates
@@ -146,7 +159,7 @@ class LCD:
                 "duration": duration
             })
 
-    def show_denied(self, message, duration=2):
+    def show_denied(self, message, duration=8):
         self._ensure_worker_alive()
         print(f"DEBUG [show_denied]: Called on instance pid={os.getpid()}", flush=True)
         with self._queue.mutex: # Clear pending default updates
