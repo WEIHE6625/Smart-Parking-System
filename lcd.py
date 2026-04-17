@@ -33,10 +33,14 @@ class LCD:
             if msg.topic == "parking/full_state":
                 data = json.loads(msg.payload.decode('utf-8'))
                 
-                # Look for your TOTAL_AVAILABLE key in the broadcasted JSON
                 if "TOTAL_AVAILABLE" in data:
-                    self._synced_slot_count = int(data["TOTAL_AVAILABLE"])
-                    print(f"[PID {os.getpid()}] Worker synced slot count to: {self._synced_slot_count}", flush=True)
+                    new_count = int(data["TOTAL_AVAILABLE"])
+                    
+                    # Only trigger an update if the count actually changed!
+                    if new_count != self._synced_slot_count:
+                        self._synced_slot_count = new_count
+                        print(f"[PID {os.getpid()}] Worker synced slot count to: {self._synced_slot_count}", flush=True)
+                        self.show_default()
         except Exception as e:
             print(f"LCD Sync Error: {e}", flush=True)
 
@@ -63,17 +67,6 @@ class LCD:
             self.mqtt_client.loop_start()
             
             self._is_connected = True
-
-    # def connect_cloud_mqtt(self):
-    #     broker, port, user, pw = self._mqtt_creds
-    #     self.mqtt_client.username_pw_set(user, pw)
-    #     self.mqtt_client.tls_set()
-    #     self.mqtt_client.on_connect = lambda c, u, f, rc, p=None: \
-    #         print(f"LCD MQTT connected: rc={rc}", flush=True)
-    #     self.mqtt_client.on_disconnect = lambda c, u, rc, p=None: \
-    #         print(f"LCD MQTT disconnected: rc={rc}", flush=True)
-    #     self.mqtt_client.connect(broker, port)
-    #     self.mqtt_client.loop_start()
         
     def set_available_provider(self, func):
         self.total_available = func
@@ -92,23 +85,18 @@ class LCD:
         line1 = self._safe_text(line1)
         line2 = self._safe_text(line2)
 
-        print(f"[PID {os.getpid()}] Line 1: {line1} | Line 2: {line2}", flush=True)
         # Check timing and dedup OUTSIDE the lock
         now = time.time()
         with self._lock:
             if line1 == self._last_line1 and line2 == self._last_line2:
-                print(f"Same || Line 1: {line1} | Line 2: {line2}")
                 return
             elapsed = now - self._last_update_time
-            print(f"Else || Line 1: {line1} | Line 2: {line2}")
         
         # Sleep OUTSIDE the lock so MQTT thread isn't blocked
         if elapsed < self._min_update_gap:
             time.sleep(self._min_update_gap - elapsed)
 
         payload = json.dumps({"line1": line1, "line2": line2}) 
-        print(f"Publishing to MQTT: {payload}", flush=True) 
-
         msg_info = self.mqtt_client.publish("parking/lcd/display", payload, qos=1)
         
         try:
@@ -132,11 +120,8 @@ class LCD:
     def _worker_loop(self):
         while True:
             job = self._queue.get()
-            print(f"DEBUG: Worker picked up job type: {job['type']}", flush=True)
-            print(f"DEBUG: Worker picked up job: {job}", flush=True)
 
             if job["type"] == "temp":
-                print(f"DEBUG: Attempting to publish TEMP: {job['line1']}", flush=True)
                 self._is_showing_temp = True # Mark as busy
                 self._write_now(job["line1"], job["line2"])
                 time.sleep(job["duration"])
@@ -144,38 +129,18 @@ class LCD:
                 self._show_default_now()
 
             elif job["type"] == "default":
-                print("DEBUG: Attempting to publish DEFAULT", flush=True)
                 if not self._is_showing_temp:
                     self._show_default_now()
 
             self._queue.task_done()
 
-    def _log_queue_state(self):
-        """Helper to snapshot and print the current queue contents."""
-        # We use the mutex to ensure we get a consistent snapshot
-        with self._queue.mutex:
-            # Convert deque to list to see items
-            current_items = list(self._queue.queue)
-            count = len(current_items)
-            
-        print(f"--- Queue Status (Size: {count}) ---")
-        if count == 0:
-            print("Queue is empty.")
-        else:
-            for i, item in enumerate(current_items):
-                print(f" [{i}] Type: {item['type']} | Content: {item.get('line1', 'N/A')}")
-        print("-----------------------------------")
-
     def show_default(self):
         self._ensure_worker_alive()
-        print(f"DEBUG [show_default]: Called on instance pid={os.getpid()}", flush=True)
         if self._queue.empty():
             self._queue.put({"type": "default"})
-            # self._log_queue_state()
 
     def show_success(self, balance, is_entry, user_name, duration=3):
         self._ensure_worker_alive()
-        print(f"DEBUG [show_success]: Called on instance pid={os.getpid()}", flush=True)
         with self._queue.mutex: # Clear pending default updates
             self._queue.queue.clear()
         if is_entry:
@@ -194,7 +159,6 @@ class LCD:
 
     def show_denied(self, message, duration=3):
         self._ensure_worker_alive()
-        print(f"DEBUG [show_denied]: Called on instance pid={os.getpid()}", flush=True)
         with self._queue.mutex: # Clear pending default updates
             self._queue.queue.clear()
             

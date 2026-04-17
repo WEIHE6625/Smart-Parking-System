@@ -167,11 +167,8 @@ def recalculate_available():
         parking_state["ZONE_AVAILABLE"][zone] = available
         total += available
 
-    old_total = parking_state["TOTAL_AVAILABLE"]
+    # Update the state
     parking_state["TOTAL_AVAILABLE"] = total
-
-    if old_total != total:
-        lcd_display.show_default()
 
 def broadcast_state():
     # Publish the updated parking state to MQTT instead of using SSE queues
