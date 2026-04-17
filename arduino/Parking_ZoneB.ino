@@ -91,6 +91,13 @@ const unsigned long GATE_CLOSE_DELAY_MS = 10000; // 10 seconds — adjust to you
 bool gateCloseScheduled = false;
 unsigned long gateCloseScheduledAt = 0xFFFFFFFF;  // init far in the past so first check never fires instantly
 
+// ── Manual override — set true when dashboard opens gate manually ─────────────
+// While true, ALL automatic close logic is suppressed. Cleared when:
+//   (a) dashboard sends manual_close, or
+//   (b) Zone A becomes full (automatic open takes over).
+bool manualOverride = false;
+// ─────────────────────────────────────────────────────────────────────────────
+
 const char* WIFI_SSID     = "B100M-T3";
 const char* WIFI_PASSWORD = "12345678";
 
@@ -212,6 +219,28 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
   String topicStr = String(topic);
 
+  // ── Manual gate override command ──────────────────────────────────────────────
+  if (topicStr == "parking/Zone_B/barrier/command") {
+    String msgStr = String(msg);
+    if (msgStr == "manual_open") {
+      Serial.println("[MANUAL] Dashboard requested gate OPEN");
+      manualOverride      = true;
+      gateCloseScheduled  = false;
+      gatePendingClose    = false;
+      if (!servoOpen) {
+        smooth_move(SERVO_OPEN_DEG);
+        servoOpen = true;
+      }
+      mqttClient.publish("parking/Zone_A/barrier/status", "{\"barrier\":\"open\",\"reason\":\"manual_override\"}", true);
+    } else if (msgStr == "manual_close") {
+      Serial.println("[MANUAL] Dashboard requested gate CLOSE");
+      manualOverride = false;
+      safeCloseGate();
+    }
+    return;
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+
   // Only process Zone A slot status messages
   if (!topicStr.startsWith("parking/Zone_A/Slot_A")) return;
 
@@ -266,6 +295,8 @@ void connectMQTT() {
       // ── MOVED FROM ZONE A: subscribe to Zone A slot status ────────────────
       mqttClient.subscribe("parking/Zone_A/+/status");
       Serial.println("Subscribed to parking/Zone_A/+/status");
+      mqttClient.subscribe("parking/Zone_B/barrier/command");
+      Serial.println("Subscribed to parking/Zone_B/barrier/command");
       // ─────────────────────────────────────────────────────────────────────
     } else {
       Serial.print("failed, rc=");
@@ -430,14 +461,17 @@ void scheduleGateEvaluation() {
     updateServoForZoneA();
 
   } else if (!zoneAFull && !anyZoneBActive && servoOpen) {
-    // Zone B just became empty and Zone A has space → schedule close with delay.
-    // Always reset the timer — if gateCloseScheduled was already true from a stale
-    // previous evaluation, the old timestamp would cause an instant close.
-    gateCloseScheduled   = true;
-    gateCloseScheduledAt = millis();
-    Serial.println("[SERVO] Zone B now empty - close scheduled in 10 seconds");
-    mqttClient.publish("parking/Zone_A/barrier/status",
-      "{\"barrier\":\"closing_soon\",\"reason\":\"zone_B_empty\"}", true);
+    // Zone B just became empty and Zone A has space → schedule close with delay,
+    // but only if the gate is not held open by manual override.
+    if (!manualOverride) {
+      gateCloseScheduled   = true;
+      gateCloseScheduledAt = millis();
+      Serial.println("[SERVO] Zone B now empty - close scheduled in 10 seconds");
+      mqttClient.publish("parking/Zone_A/barrier/status",
+        "{\"barrier\":\"closing_soon\",\"reason\":\"zone_B_empty\"}", true);
+    } else {
+      Serial.println("[SERVO] Zone B empty but manual override active - gate stays open");
+    }
 
   } else if (!zoneAFull && anyZoneBActive && !servoOpen) {
     // Zone B still has cars and gate is closed → open immediately
@@ -457,23 +491,27 @@ void updateServoForZoneA() {
   bool anyZoneBActive = isAnyZoneBOccupied();
 
   if (zoneAFull && !servoOpen) {
-    // Condition 1 — Zone A full → open gate immediately
+    // Condition 1 — Zone A full → open gate immediately; automatic mode resumes
     Serial.println("[SERVO] Zone A FULL - opening barrier");
+    manualOverride      = false;  // automatic trigger overrides manual hold
     gatePendingClose    = false;
-    gateCloseScheduled  = false;  // cancel any pending close
+    gateCloseScheduled  = false;
     smooth_move(SERVO_OPEN_DEG);
     servoOpen = true;
     mqttClient.publish("parking/Zone_A/barrier/status",
       "{\"barrier\":\"open\",\"reason\":\"zone_A_full\"}", true);
 
   } else if (!zoneAFull && !anyZoneBActive && servoOpen) {
-    // Condition 2 — Zone A has space AND Zone B empty → schedule close after delay.
-    // Always reset the timer — a stale gateCloseScheduledAt would cause an instant close.
-    gateCloseScheduled   = true;
-    gateCloseScheduledAt = millis();
-    Serial.println("[SERVO] Zone B empty - close scheduled in 10 seconds");
-    mqttClient.publish("parking/Zone_A/barrier/status",
-      "{\"barrier\":\"closing_soon\",\"reason\":\"zone_B_empty\"}", true);
+    // Condition 2 — Zone A has space AND Zone B empty → schedule close, unless manual override.
+    if (!manualOverride) {
+      gateCloseScheduled   = true;
+      gateCloseScheduledAt = millis();
+      Serial.println("[SERVO] Zone B empty - close scheduled in 10 seconds");
+      mqttClient.publish("parking/Zone_A/barrier/status",
+        "{\"barrier\":\"closing_soon\",\"reason\":\"zone_B_empty\"}", true);
+    } else {
+      Serial.println("[SERVO] Zone B empty but manual override active - gate stays open");
+    }
     // Actual close happens in checkScheduledGateClose() in loop()
 
   } else if (!zoneAFull && anyZoneBActive && !servoOpen) {
@@ -497,6 +535,7 @@ void updateServoForZoneA() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 void checkScheduledGateClose(unsigned long now) {
+  if (manualOverride) return;  // manual override active — suppress auto-close
   // Always use fresh millis() — smooth_move() blocks ~1.5s, so the loop-captured
   // `now` can be older than gateCloseScheduledAt. Unsigned subtraction then wraps
   // to a huge value, making elapsed time look > 10s and triggering instant close.
@@ -521,6 +560,7 @@ void checkScheduledGateClose(unsigned long now) {
 
 // ── MOVED FROM ZONE A: Pending close retry ───────────────────────────────────
 void checkPendingGateClose(unsigned long now) {
+  if (manualOverride) return;  // manual override active — suppress auto-close
   if (!gatePendingClose) return;
   unsigned long freshNow = millis();  // use fresh time — same stale-now risk as checkScheduledGateClose
   if (freshNow - gatePendingSince < GATE_RECHECK_DELAY_MS) return;

@@ -346,8 +346,8 @@ void updateSlot(ParkingSlot &slot, unsigned long now) {
     slot.occupied = slot.candidateOccupied;
     applyLedState(slot);
     reportSlotChange(slot);
+    publishSlotStatus(slot);
   }
-  publishSlotStatus(slot);
 }
 
 void updateIllegalParking(IllegalParkingSensor &sensor, unsigned long now) {
