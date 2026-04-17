@@ -274,7 +274,5 @@ def start_mqtt_listener():
     mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
     mqtt_client.loop_forever()
 
-def get_total_available():
-    return parking_state["TOTAL_AVAILABLE"]
 
-lcd_display.set_available_provider(get_total_available)
+lcd_display.set_available_provider(parking_state["TOTAL_AVAILABLE"])

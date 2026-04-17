@@ -30,7 +30,7 @@ app.register_blueprint(slot_bp)
 
 @app.route('/')
 def home():
-    # lcd_display.show_default()
+    lcd_display.show_default()
     return redirect(url_for('auth.login'))
 
 @app.route('/dashboard')

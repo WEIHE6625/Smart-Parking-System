@@ -54,14 +54,14 @@ class LCD:
     #     self.mqtt_client.connect(broker, port)
     #     self.mqtt_client.loop_start()
         
-    def set_available_provider(self, provider_func):
-        self.available_provider = provider_func
+    def set_available_provider(self, total_available):
+        self.total_available = total_available
 
     def _get_available_slot(self):
-        if self.available_provider is None:
+        if self.total_available is None:
             return 0
         try:
-            return int(self.available_provider())
+            return self.total_available
         except Exception:
             return 0
 
@@ -85,19 +85,15 @@ class LCD:
             elapsed = now - self._last_update_time
             print(f"Else || Line 1: {line1} | Line 2: {line2}")
         
-        print("State 1")
         # Sleep OUTSIDE the lock so MQTT thread isn't blocked
         if elapsed < self._min_update_gap:
             time.sleep(self._min_update_gap - elapsed)
 
-        print("State 2")
         payload = json.dumps({"line1": line1, "line2": line2}) 
         print(f"Publishing to MQTT: {payload}", flush=True) 
 
-        # 1. Send with QoS 1 (Guaranteed Delivery)
         msg_info = self.mqtt_client.publish("parking/lcd/display", payload, qos=1)
         
-        # 2. Wait up to 2 seconds for HiveMQ to acknowledge
         try:
             msg_info.wait_for_publish(timeout=2.0)
             if msg_info.is_published():
@@ -106,8 +102,6 @@ class LCD:
                 print(f"[PID {os.getpid()}] MQTT Publish FAILED: Timeout! The network thread is dead.", flush=True)
         except Exception as e:
             print(f"[PID {os.getpid()}] MQTT Publish ERROR: {e}", flush=True)
-
-        print("State 3")
 
         with self._lock:
             self._last_line1 = line1
@@ -162,7 +156,7 @@ class LCD:
             self._queue.put({"type": "default"})
             # self._log_queue_state()
 
-    def show_success(self, balance, is_entry, user_name, duration=8):
+    def show_success(self, balance, is_entry, user_name, duration=3):
         self._ensure_worker_alive()
         print(f"DEBUG [show_success]: Called on instance pid={os.getpid()}", flush=True)
         with self._queue.mutex: # Clear pending default updates
@@ -181,7 +175,7 @@ class LCD:
                 "duration": duration
             })
 
-    def show_denied(self, message, duration=8):
+    def show_denied(self, message, duration=3):
         self._ensure_worker_alive()
         print(f"DEBUG [show_denied]: Called on instance pid={os.getpid()}", flush=True)
         with self._queue.mutex: # Clear pending default updates
