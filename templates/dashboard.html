@@ -12,8 +12,74 @@
             background: #f4f6f9;
         }
 
+        .leaderboard-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            min-width: 300px;
+            flex: 1;
+        }
+
+        .leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .leaderboard-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-name {
+            font-weight: bold;
+            color: #333;
+            text-transform: capitalize;
+        }
+
+        .user-spent {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
         h1 {
             margin-bottom: 20px;
+        }
+        .dashboard-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap; 
+            align-items: flex-start;
+        }
+
+        .live-section {
+            flex: 1;
+            min-width: 350px;
+        }
+
+        .chart-section {
+            flex: 1;
+            min-width: 400px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        canvas {
+            max-width: 100%;
         }
 
         .summary {
@@ -26,9 +92,20 @@
         .card {
             background: white;
             border-radius: 10px;
-            padding: 16px;
-            min-width: 180px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 20px;
+            min-width: 200px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: all 0.3s ease; 
+        }
+
+        .status-high { color: #2e7d32; } 
+        .status-med { color: #f57c00; } 
+        .status-full { color: #c62828; } 
+
+        #totalAvailable {
+            font-size: 48px; /* Make it massive */
+            margin: 10px 0;
         }
 
         .zones {
@@ -134,44 +211,88 @@
             display: flex;
         }
 
+        @keyframes pulseUpdate {
+            0% { transform: scale(1); color: #1976d2; }
+            50% { transform: scale(1.2); color: #4caf50; }
+            100% { transform: scale(1); }
+        }
+
+        .pulse {
+            animation: pulseUpdate 0.4s ease-out;
+        }
+
     </style>
 </head>
 <body>
     <h1>Smart Parking Dashboard</h1>
     <p>Status: <span id="liveStatus" style="font-weight:bold; color: #1976d2;">Connecting...</span></p>
+    <div class = "dashboard-container">
+        <div class = "live-section">
+            <div class="summary">
+                <div class="card">
+                    <h3 style="margin-top: 0; color: #555;">Available Slots</h3>
+                    <div style="display: flex; align-items: baseline; justify-content: center; gap: 5px;">
+                        <h2 id="totalAvailable" style="margin: 0; font-size: 42px;">0</h2>
+                        <span style="color: #888; font-size: 18px;">/ 4</span>
+                    </div>
+                    
+                    <div style="width: 100%; background: #e0e0e0; height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
+                        <div id="availabilityBar" style="width: 0%; height: 100%; background: #2e7d32; transition: width 0.5s ease, background 0.5s ease;"></div>
+                    </div>
+                </div>
+            </div>
 
-    <div class="summary">
-        <div class="card">
-            <h3>Total Available</h3>
-            <h2 id="totalAvailable">0</h2>
-        </div>
-    </div>
+            <div class="zones">
+                <div class="zone-box">
+                    <h2>Zone A (Slots: <span id="zoneAAvailable">0</span>)</h2>
+                    <div id="Slot_A1" class="slot empty">Slot A1 - empty<span class="small">Distance: 0 cm</span></div>
+                    <div id="Slot_A2" class="slot empty">Slot A2 - empty<span class="small">Distance: 0 cm</span></div>
+                </div>
 
-    <div class="zones">
-        <div class="zone-box">
-            <h2>Zone A (Slots: <span id="zoneAAvailable">0</span>)</h2>
-            <div id="Slot_A1" class="slot empty">Slot A1 - empty<span class="small">Distance: 0 cm</span></div>
-            <div id="Slot_A2" class="slot empty">Slot A2 - empty<span class="small">Distance: 0 cm</span></div>
-        </div>
+                <div class="zone-box">
+                    <h2>Zone B (Slots: <span id="zoneBAvailable">0</span>)</h2>
+                    <div id="Slot_B1" class="slot empty">Slot B1 - empty<span class="small">Distance: 0 cm</span></div>
+                    <div id="Slot_B2" class="slot empty">Slot B2 - empty<span class="small">Distance: 0 cm</span></div>
+                </div>
+            </div>
 
-        <div class="zone-box">
-            <h2>Zone B (Slots: <span id="zoneBAvailable">0</span>)</h2>
-            <div id="Slot_B1" class="slot empty">Slot B1 - empty<span class="small">Distance: 0 cm</span></div>
-            <div id="Slot_B2" class="slot empty">Slot B2 - empty<span class="small">Distance: 0 cm</span></div>
+            <div id="illegalStatusContainer" style="display: none; background: #ffebee; border: 2px solid #c62828; padding: 15px; border-radius: 8px; margin-top: 20px; max-width: 650px;">
+                <h3 style="color: #c62828; margin-top: 0;">🚨 Illegal Parking Status 🚨</h3>
+                
+                <div id="illegalZoneA" class="illegal-item illegal-clear">
+                    Slot A1 & A2 - CLEAR
+                    <span class="small">Distance: 0 cm</span>
+                </div>
+                
+                <div id="illegalZoneB" class="illegal-item illegal-clear">
+                    Slot B1 & B2 - CLEAR
+                    <span class="small">Distance: 0 cm</span>
+                </div>
+            </div>
         </div>
-    </div>
-
-    <div id="illegalStatusContainer" style="display: none; background: #ffebee; border: 2px solid #c62828; padding: 15px; border-radius: 8px; margin-top: 20px; max-width: 650px;">
-        <h3 style="color: #c62828; margin-top: 0;">🚨 Illegal Parking Status 🚨</h3>
-        
-        <div id="illegalZoneA" class="illegal-item illegal-clear">
-            Slot A1 & A2 - CLEAR
-            <span class="small">Distance: 0 cm</span>
-        </div>
-        
-        <div id="illegalZoneB" class="illegal-item illegal-clear">
-            Slot B1 & B2 - CLEAR
-            <span class="small">Distance: 0 cm</span>
+        <div style = "display:flex;flex-direction: column;gap: 20px;flex: 1;min-width: 400px;">
+        <div class="chart-section">
+                <h2 style="margin-top: 0; color: #333;">Daily Parking Earnings</h2>
+                <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <div>
+                        <label for="startDate" style="font-size: 14px; font-weight: bold;">From:</label>
+                        <input type="date" id="startDate" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
+                    </div>
+                    <div>
+                        <label for="endDate" style="font-size: 14px; font-weight: bold;">To:</label>
+                        <input type="date" id="endDate" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
+                    </div>
+                    <button onclick="applyDateFilter()" style="padding: 6px 12px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Filter</button>
+                    <button onclick="resetDateFilter()" style="padding: 6px 12px; background: #9e9e9e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Reset</button>
+                </div>
+                        <canvas id="earningsChart"></canvas>
+            </div>
+            <div class="leaderboard-section">
+                <h2 style="margin-top: 0; color: #333;">Top Spenders</h2>
+                <ul id="topSpendersList" class="leaderboard-list">
+                    <li>Loading leaderboard...</li>
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -342,7 +463,39 @@
                 const data = JSON.parse(message.payloadString);
                 console.log("PARSED:", data);
                 
-                document.getElementById("totalAvailable").textContent = data.TOTAL_AVAILABLE;
+                const totalAvailableEl = document.getElementById("totalAvailable");
+                const available = parseInt(data.TOTAL_AVAILABLE);
+                const maxSlots = 4;
+                const percentage = (available / maxSlots) * 100;
+
+                if (totalAvailableEl.textContent != data.TOTAL_AVAILABLE) {
+                    totalAvailableEl.textContent = data.TOTAL_AVAILABLE;
+                    
+                    totalAvailableEl.classList.remove("pulse");
+                    void totalAvailableEl.offsetWidth; 
+                    totalAvailableEl.classList.add("pulse");
+                }
+
+
+                totalAvailableEl.textContent = available;
+
+                totalAvailableEl.className = "";
+                if (available > 2) {
+                    totalAvailableEl.classList.add("status-high");
+                } else if (available > 0) {
+                    totalAvailableEl.classList.add("status-med");
+                } else {
+                    totalAvailableEl.classList.add("status-full");
+                }
+
+                const bar = document.getElementById("availabilityBar");
+                if (bar) {
+                    bar.style.width = percentage + "%";
+                    if (available === 0) bar.style.background = "#c62828";
+                    else if (available <= 2) bar.style.background = "#f57c00";
+                    else bar.style.background = "#2e7d32";
+                }
+
                 document.getElementById("zoneAAvailable").textContent = data.ZONE_AVAILABLE.Zone_A;
                 document.getElementById("zoneBAvailable").textContent = data.ZONE_AVAILABLE.Zone_B;
 
@@ -363,8 +516,9 @@
                 }
                 wasIllegalA = isIllegalA;
                 wasIllegalB = isIllegalB;
+                
             } catch (e) {
-                console.error("Error parsing MQTT payload", e);
+                console.error("Error parsing MQTT payload or updating UI:", e);
             }
         };
 
@@ -469,6 +623,194 @@
         function closeModal() {
             document.getElementById("illegalModal").classList.remove("show");
         }
+    </script>   
+
+
+
+    <!--JS Graph-->
+    <script>
+        // Global variables to store our chart instance and raw data
+        let earningsChartInstance = null;
+            let allDates = [];
+            let allEarnings = [];
+
+            // Master function to fetch data ONCE
+        async function fetchDashboardData() {
+            // Since you want the whole DB to access Users, Cards, and History, 
+            // remove the /Parking_History path and fetch the root.
+            const url = "https://spsystem-44375-default-rtdb.asia-southeast1.firebasedatabase.app/.json";
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (!data) return;
+
+                // 1. Process Data for the Chart
+                processChartData(data.Parking_History);
+
+                // 2. Process Data for the Leaderboard
+                processLeaderboardData(data);
+
+            } catch (error) {
+                console.error("Error loading dashboard data:", error);
+            }
+        }
+
+        function processChartData(historyData) {
+        if (!historyData) return;
+        
+        const dailyEarnings = {};
+
+        for (const key in historyData) {
+            const session = historyData[key];
+            if (session.Exit_Time && session.Fee_Paid !== undefined) {
+                const date = session.Exit_Time.substring(0, 10);
+                if (!dailyEarnings[date]) dailyEarnings[date] = 0;
+                dailyEarnings[date] += Number(session.Fee_Paid);
+            }
+        }
+
+        allDates = Object.keys(dailyEarnings).sort();
+        allEarnings = allDates.map(date => dailyEarnings[date]);
+        renderChart(allDates, allEarnings); // Your existing render function
+        }   
+
+        function processLeaderboardData(data) {
+            const history = data.Parking_History || {};
+            const cards = data.Card || {};
+            const users = data.User || {};
+
+            let userTotals = {}; // Will hold { "User_ID": TotalAmount }
+
+            // Step 1: Calculate total spent per User_ID
+            for (const key in history) {
+                const session = history[key];
+                const fee = Number(session.Fee_Paid) || 0;
+                const cardId = session.Card_ID;
+
+                if (fee > 0 && cards[cardId]) {
+                    const userId = cards[cardId].User_ID;
+                    if (userId) {
+                        if (!userTotals[userId]) userTotals[userId] = 0;
+                        userTotals[userId] += fee;
+                    }
+                }
+            }
+
+            // Step 2: Match User_ID to their Name and convert to an array
+            let leaderboard = [];
+            for (const userId in userTotals) {
+                const name = users[userId] ? users[userId].Name : "Unknown User";
+                leaderboard.push({ 
+                    name: name, 
+                    total: userTotals[userId] 
+                });
+            }
+
+            // Step 3: Sort the array from highest spender to lowest
+            leaderboard.sort((a, b) => b.total - a.total);
+
+            // Step 4: Update the HTML DOM
+            const listElement = document.getElementById('topSpendersList');
+            listElement.innerHTML = ''; // Clear the "Loading..." text
+
+            if (leaderboard.length === 0) {
+                listElement.innerHTML = '<li>No spending data available.</li>';
+                return;
+            }
+
+            // Generate HTML for the Top 5 users
+            const top5 = leaderboard.slice(0, 5); 
+            top5.forEach((user, index) => {
+                const listItem = document.createElement('li');
+                listItem.className = 'leaderboard-item';
+                
+                // Add medals for 1st, 2nd, 3rd place
+                let rankStr = `${index + 1}.`;
+                if (index === 0) rankStr = '🥇';
+                if (index === 1) rankStr = '🥈';
+                if (index === 2) rankStr = '🥉';
+
+                listItem.innerHTML = `
+                    <div>
+                        <span style="margin-right: 10px; color: #757575;">${rankStr}</span>
+                        <span class="user-name">${user.name}</span>
+                    </div>
+                    <div class="user-spent">RM ${user.total.toFixed(2)}</div>
+                `;
+                listElement.appendChild(listItem);
+            });
+        }
+
+        function renderChart(labels, dataPoints) {
+            const ctx = document.getElementById('earningsChart').getContext('2d');
+            
+            if (earningsChartInstance) {
+                earningsChartInstance.destroy();
+            }
+
+            earningsChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Fee Paid (RM)',
+                        data: dataPoints,
+                        borderColor: '#2ca02c',
+                        backgroundColor: 'rgba(44, 160, 44, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'RM' } },
+                        x: { title: { display: true, text: 'Date' } }
+                    }
+                }
+            });
+        }
+
+        function applyDateFilter() {
+            const startDateStr = document.getElementById('startDate').value;
+            const endDateStr = document.getElementById('endDate').value;
+
+            if (!startDateStr && !endDateStr) {
+                alert("Please select at least one date to filter.");
+                return;
+            }
+
+            let filteredDates = [];
+            let filteredEarnings = [];
+
+            for (let i = 0; i < allDates.length; i++) {
+                const currentDate = allDates[i];
+                
+                let isAfterStart = !startDateStr || currentDate >= startDateStr;
+                let isBeforeEnd = !endDateStr || currentDate <= endDateStr;
+
+                if (isAfterStart && isBeforeEnd) {
+                    filteredDates.push(currentDate);
+                    filteredEarnings.push(allEarnings[i]);
+                }
+            }
+
+            renderChart(filteredDates, filteredEarnings);
+        }
+
+        function resetDateFilter() {
+            document.getElementById('startDate').value = "";
+            document.getElementById('endDate').value = "";
+            
+            renderChart(allDates, allEarnings);
+        }
+
+        fetchDashboardData();
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
