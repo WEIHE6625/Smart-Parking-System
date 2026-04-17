@@ -1,4 +1,5 @@
 import time
+import os
 import threading
 import queue
 import json
@@ -96,6 +97,7 @@ class LCD:
             self._queue.put({"type": "default"})
 
     def show_success(self, balance, is_entry, user_name, duration=2):
+        print(f"DEBUG [show_success]: Called on instance pid={os.getpid()}", flush=True)
         with self._queue.mutex: # Clear pending default updates
             self._queue.queue.clear()
         if is_entry:
@@ -117,6 +119,7 @@ class LCD:
             return 0
 
     def show_denied(self, message, duration=2):
+        print(f"DEBUG [show_denied]: Called on instance pid={os.getpid()}", flush=True)
         with self._queue.mutex: # Clear pending default updates
             self._queue.queue.clear()
             
