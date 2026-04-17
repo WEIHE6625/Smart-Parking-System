@@ -22,6 +22,10 @@ class LCD:
     def connect_cloud_mqtt(self, broker, port, user, pw):
         self.mqtt_client.username_pw_set(user, pw)
         self.mqtt_client.tls_set()
+        self.mqtt_client.on_connect = lambda c, u, f, rc, p=None: \
+            print(f"LCD MQTT connected: rc={rc}", flush=True)
+        self.mqtt_client.on_disconnect = lambda c, u, rc, p=None: \
+            print(f"LCD MQTT disconnected: rc={rc}", flush=True)
         self.mqtt_client.connect(broker, port)
         self.mqtt_client.loop_start()
         
@@ -79,10 +83,10 @@ class LCD:
                 self._is_showing_temp = False # Mark as free
                 self._show_default_now()
 
-            elif job["type"] == "default":
-                print("DEBUG: Attempting to publish DEFAULT", flush=True)
-                if not self._is_showing_temp:
-                    self._show_default_now()
+            # elif job["type"] == "default":
+            #     print("DEBUG: Attempting to publish DEFAULT", flush=True)
+            #     if not self._is_showing_temp:
+            #         self._show_default_now()
 
             self._queue.task_done()
 
