@@ -33,10 +33,16 @@ class LCD:
             if msg.topic == "parking/full_state":
                 data = json.loads(msg.payload.decode('utf-8'))
                 
-                # Look for your TOTAL_AVAILABLE key in the broadcasted JSON
                 if "TOTAL_AVAILABLE" in data:
-                    self._synced_slot_count = int(data["TOTAL_AVAILABLE"])
-                    print(f"[PID {os.getpid()}] Worker synced slot count to: {self._synced_slot_count}", flush=True)
+                    new_count = int(data["TOTAL_AVAILABLE"])
+                    
+                    # Only trigger an update if the count actually changed!
+                    if new_count != self._synced_slot_count:
+                        self._synced_slot_count = new_count
+                        print(f"[PID {os.getpid()}] Worker synced slot count to: {self._synced_slot_count}", flush=True)
+                        
+                        # FIX: Immediately trigger the screen to refresh with the current number!
+                        self.show_default()
         except Exception as e:
             print(f"LCD Sync Error: {e}", flush=True)
 
