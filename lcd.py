@@ -21,6 +21,24 @@ class LCD:
 
         self._is_connected = False 
         self._mqtt_creds = None
+        self._synced_slot_count = 0
+
+    def _on_connect(self, client, userdata, flags, reason_code, properties):
+        print(f"[PID {os.getpid()}] LCD connected! Subscribing to sync topic...", flush=True)
+        # Subscribe to the topic where you broadcast your parking state
+        client.subscribe("parking/full_state")
+
+    def _on_message(self, client, userdata, msg):
+        try:
+            if msg.topic == "parking/full_state":
+                data = json.loads(msg.payload.decode('utf-8'))
+                
+                # Look for your TOTAL_AVAILABLE key in the broadcasted JSON
+                if "TOTAL_AVAILABLE" in data:
+                    self._synced_slot_count = int(data["TOTAL_AVAILABLE"])
+                    print(f"[PID {os.getpid()}] Worker synced slot count to: {self._synced_slot_count}", flush=True)
+        except Exception as e:
+            print(f"LCD Sync Error: {e}", flush=True)
 
     def _ensure_worker_alive(self):
         """Ensures the background thread is running in the current process."""
@@ -38,6 +56,9 @@ class LCD:
             self.mqtt_client.username_pw_set(user, pw)
             self.mqtt_client.tls_set()
             
+            self.mqtt_client.on_connect = self._on_connect
+            self.mqtt_client.on_message = self._on_message
+
             self.mqtt_client.connect(broker, port)
             self.mqtt_client.loop_start()
             
@@ -58,12 +79,8 @@ class LCD:
         self.total_available = func
 
     def _get_available_slot(self):
-        if self.total_available is None:
-            return 0
-        try:
-            return self.total_available()
-        except Exception:
-            return 0
+        # We no longer need the provider function, we just return the synced value!
+        return self._synced_slot_count
 
     def _safe_text(self, text):
         return str(text)[:16].ljust(16)
