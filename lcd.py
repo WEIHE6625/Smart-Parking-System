@@ -92,7 +92,24 @@ class LCD:
 
             self._queue.task_done()
 
+    def _log_queue_state(self):
+        """Helper to snapshot and print the current queue contents."""
+        # We use the mutex to ensure we get a consistent snapshot
+        with self._queue.mutex:
+            # Convert deque to list to see items
+            current_items = list(self._queue.queue)
+            count = len(current_items)
+            
+        print(f"--- Queue Status (Size: {count}) ---")
+        if count == 0:
+            print("Queue is empty.")
+        else:
+            for i, item in enumerate(current_items):
+                print(f" [{i}] Type: {item['type']} | Content: {item.get('line1', 'N/A')}")
+        print("-----------------------------------")
+
     def show_default(self):
+        print(f"DEBUG [show_default]: Called on instance pid={os.getpid()}", flush=True)
         if self._queue.empty():
             self._queue.put({"type": "default"})
 
@@ -114,6 +131,7 @@ class LCD:
                 "line2": line2,
                 "duration": duration
             })
+            self._log_queue_state()
             return 1
         except queue.Full:
             return 0
@@ -132,6 +150,7 @@ class LCD:
                 "line2": short_msg,
                 "duration": duration
             })
+            self._log_queue_state()
             return 1
         except queue.Full:
             return 0
