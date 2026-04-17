@@ -10,6 +10,46 @@ body {
     overflow-x: hidden;
 }
 
+.dashboard-header {
+    width: 100%;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    margin-bottom: 30px;
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-icon {
+    font-size: 2em; /* Same as fa-2x */
+}
+
+.header-title {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: 1px;
+}
+
+.header-status {
+    background: rgba(255,255,255,0.1);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.status-text {
+    color: #64ffda;
+}
+
 .leaderboard-section {
     width: 100%; 
     background: white;
@@ -350,6 +390,33 @@ canvas {
 
 
 @media (max-width: 768px) {
+
+    .dashboard-header {
+        flex-direction: column; /* Stacks the status below the title */
+        padding: 15px;
+        gap: 15px; /* Adds breathing room between the title and status */
+        text-align: center;
+    }
+
+    .header-brand {
+        justify-content: center; /* Centers the icon and title */
+        gap: 10px;
+    }
+
+    .header-icon {
+        font-size: 1.5em; /* Shrinks the car icon */
+    }
+
+    .header-title {
+        font-size: 18px; /* Shrinks the title text to prevent overflow */
+    }
+
+    .header-status {
+        font-size: 12px; /* Makes the status pill slightly smaller */
+        padding: 6px 14px;
+    }
+    
+
     .card {
         max-width: none; 
         width: 100%;     
