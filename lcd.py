@@ -26,6 +26,7 @@ class LCD:
         """Ensures the background thread is running in the current process."""
         if self._worker is None or not self._worker.is_alive():
             self._worker = threading.Thread(target=self._worker_loop, daemon=True)
+            self._worker.start()
 
     def setup_mqtt_credentials(self, broker, port, user, pw):
         self._mqtt_creds = (broker, port, user, pw)
