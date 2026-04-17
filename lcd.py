@@ -16,10 +16,15 @@ class LCD:
         self._last_update_time = 0
         self._min_update_gap = 1.5
         self.mqtt_client = mqtt.Client(CallbackAPIVersion.VERSION2)
-        self._worker = threading.Thread(target=self._worker_loop, daemon=True)
-        self._worker.start()
         self._is_showing_temp = False
+        self._worker = None
 
+    def _ensure_worker_alive(self):
+        """Ensures the background thread is running in the current process."""
+        if self._worker is None or not self._worker.is_alive():
+            self._worker = threading.Thread(target=self._worker_loop, daemon=True)
+
+            self._worker.start()
     def connect_cloud_mqtt(self, broker, port, user, pw):
         self.mqtt_client.username_pw_set(user, pw)
         self.mqtt_client.tls_set()
@@ -109,11 +114,14 @@ class LCD:
         print("-----------------------------------")
 
     def show_default(self):
+        self._ensure_worker_alive()
         print(f"DEBUG [show_default]: Called on instance pid={os.getpid()}", flush=True)
         if self._queue.empty():
             self._queue.put({"type": "default"})
+            self._log_queue_state()
 
     def show_success(self, balance, is_entry, user_name, duration=2):
+        self._ensure_worker_alive()
         print(f"DEBUG [show_success]: Called on instance pid={os.getpid()}", flush=True)
         with self._queue.mutex: # Clear pending default updates
             self._queue.queue.clear()
@@ -137,6 +145,7 @@ class LCD:
             return 0
 
     def show_denied(self, message, duration=2):
+        self._ensure_worker_alive()
         print(f"DEBUG [show_denied]: Called on instance pid={os.getpid()}", flush=True)
         with self._queue.mutex: # Clear pending default updates
             self._queue.queue.clear()
