@@ -14,12 +14,12 @@ app = Flask(__name__)
 app.secret_key = "secretkey"
 init_firebase()
 
-lcd_display.connect_cloud_mqtt(
-    broker="dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud",
-    port=8883,
-    user="zceping",
-    pw="Tzp014588!"
-)
+lcd_display.setup_mqtt_credentials(
+    "dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud", 
+    8883, 
+    "zceping", 
+    "Tzp014588!"
+    )
 
 threading.Thread(target=start_mqtt_listener, daemon=True).start()
 

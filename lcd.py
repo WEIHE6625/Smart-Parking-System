@@ -19,10 +19,27 @@ class LCD:
         self._is_showing_temp = False
         self._worker = None
 
+        self._is_connected = False 
+        self._mqtt_creds = None
+
     def _ensure_worker_alive(self):
         """Ensures the background thread is running in the current process."""
         if self._worker is None or not self._worker.is_alive():
             self._worker = threading.Thread(target=self._worker_loop, daemon=True)
+
+    def setup_mqtt_credentials(self, broker, port, user, pw):
+        self._mqtt_creds = (broker, port, user, pw)
+
+    def _ensure_connected(self):
+        if not self._is_connected and self._mqtt_creds:
+            broker, port, user, pw = self._mqtt_creds
+            self.mqtt_client.username_pw_set(user, pw)
+            self.mqtt_client.tls_set()
+            self.mqtt_client.on_connect = lambda c, u, f, rc, p=None: \
+                print(f"[PID {os.getpid()}] LCD MQTT connected: rc={rc}", flush=True)
+            self.mqtt_client.connect(broker, port)
+            self.mqtt_client.loop_start() # Starts the thread IN THE WORKER
+            self._is_connected = True
 
             self._worker.start()
     def connect_cloud_mqtt(self, broker, port, user, pw):
@@ -50,6 +67,9 @@ class LCD:
         return str(text)[:16].ljust(16)
 
     def _write_now(self, line1, line2=""):
+        self._ensure_connected()
+        print(f"Is connected: {self._is_connected}")
+
         line1 = self._safe_text(line1)
         line2 = self._safe_text(line2)
 
