@@ -31,17 +31,13 @@ class LCD:
         self._mqtt_creds = (broker, port, user, pw)
 
     def _ensure_connected(self):
-        if not self._is_connected and self._mqtt_creds:
-            broker, port, user, pw = self._mqtt_creds
-            self.mqtt_client.username_pw_set(user, pw)
-            self.mqtt_client.tls_set()
-            self.mqtt_client.on_connect = lambda c, u, f, rc, p=None: \
-                print(f"[PID {os.getpid()}] LCD MQTT connected: rc={rc}", flush=True)
-            self.mqtt_client.connect(broker, port)
-            self.mqtt_client.loop_start() # Starts the thread IN THE WORKER
+        if not self._is_connected:
+            print(f"[PID {os.getpid()}] Starting MQTT Connection for this worker...", flush=True)
+            self.mqtt_client.connect("dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud", 8883) 
+            self.mqtt_client.loop_start() 
             self._is_connected = True
-
             self._worker.start()
+
     def connect_cloud_mqtt(self, broker, port, user, pw):
         self.mqtt_client.username_pw_set(user, pw)
         self.mqtt_client.tls_set()
