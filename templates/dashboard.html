@@ -202,6 +202,10 @@
                 try {
                     const d = JSON.parse(message.payloadString);
                     updateGateStatusUI(d.barrier, d.reason);
+                    // Show banner if the gate close was blocked by a car underneath
+                    if (d.reason === "close_blocked_car_detected") {
+                        showCarUnderGateBanner();
+                    }
                 } catch(e) {}
                 return;
             }
@@ -250,6 +254,9 @@
                 updateSlot("Slot_A2", data.SLOTS.Zone_A.Slot_A2);
                 updateSlot("Slot_B1", data.SLOTS.Zone_B.Slot_B1);
                 updateSlot("Slot_B2", data.SLOTS.Zone_B.Slot_B2);
+
+                // Store latest state so the Zone B warning modal can check occupancy
+                lastParkingState = data;
 
                 updateIllegalZone("illegalZoneA", "Slot A1 & A2", data.ILLEGAL_PARKING.Zone_A);
                 updateIllegalZone("illegalZoneB", "Slot B1 & B2", data.ILLEGAL_PARKING.Zone_B);
@@ -625,5 +632,126 @@
         fetchDashboardData();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- ── Zone B occupied warning modal ───────────────────────────────────── -->
+    <div id="zoneBWarningModal" style="
+        display:none; position:fixed; inset:0;
+        background:rgba(0,0,0,0.5); z-index:1000;
+        align-items:center; justify-content:center;">
+        <div style="
+            background:#fff; border-radius:14px; padding:32px 28px;
+            max-width:420px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.2);
+            font-family:'Poppins',sans-serif; text-align:center;">
+            <div style="font-size:48px; margin-bottom:12px;">⚠️</div>
+            <h3 style="margin:0 0 10px; color:#c62828; font-size:20px;">Cars Still in Zone B</h3>
+            <p style="color:#555; font-size:14px; margin:0 0 24px; line-height:1.6;">
+                There are cars currently parked in Zone B.<br>
+                Closing the gate now may trap them inside.<br><br>
+                <strong>Are you sure you want to close the gate?</strong>
+            </p>
+            <div style="display:flex; gap:12px; justify-content:center;">
+                <button onclick="confirmCloseGate()" style="
+                    padding:10px 26px; background:#c62828; color:white;
+                    border:none; border-radius:8px; font-size:14px;
+                    font-weight:700; cursor:pointer; font-family:inherit;">
+                    Yes, Close Gate
+                </button>
+                <button onclick="cancelCloseGate()" style="
+                    padding:10px 26px; background:#e0e0e0; color:#333;
+                    border:none; border-radius:8px; font-size:14px;
+                    font-weight:700; cursor:pointer; font-family:inherit;">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- ──────────────────────────────────────────────────────────────────────── -->
+
+    <!-- ── Car under gate notification banner ──────────────────────────────── -->
+    <div id="carUnderGateBanner" style="
+        display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+        background:#e65100; color:white; border-radius:10px;
+        padding:14px 24px; z-index:999; font-family:'Poppins',sans-serif;
+        box-shadow:0 4px 18px rgba(0,0,0,0.25); font-size:14px; font-weight:600;
+        align-items:center; gap:10px; max-width:90vw;">
+        <span style="font-size:20px;">🚗</span>
+        <span>Car detected under the gate — close cancelled. Retrying in 3 seconds...</span>
+        <button onclick="dismissCarUnderGateBanner()" style="
+            background:rgba(255,255,255,0.25); border:none; color:white;
+            border-radius:6px; padding:4px 10px; cursor:pointer;
+            font-size:13px; font-weight:700; margin-left:8px;">✕</button>
+    </div>
+    <!-- ──────────────────────────────────────────────────────────────────────── -->
+
+    <script>
+        // ── Track last parking state so modal can check Zone B occupancy ─────────
+        let lastParkingState = null;
+
+        function isZoneBOccupied() {
+            if (!lastParkingState) return false;
+            const slots = lastParkingState.SLOTS?.Zone_B || {};
+            return Object.values(slots).some(s => s.status === "occupied");
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+
+        // ── Zone B warning modal logic ────────────────────────────────────────────
+        // Overrides the original sendGateCommand defined above.
+        // When closing and Zone B has cars → show warning first.
+        // When opening, or Zone B is empty → send command directly.
+        function sendGateCommand(cmd) {
+            if (!client.isConnected()) {
+                alert("MQTT not connected. Please wait.");
+                return;
+            }
+            if (cmd === "manual_close" && isZoneBOccupied()) {
+                document.getElementById("zoneBWarningModal").style.display = "flex";
+                return;
+            }
+            dispatchGateCommand(cmd);
+        }
+
+        function confirmCloseGate() {
+            document.getElementById("zoneBWarningModal").style.display = "none";
+            dispatchGateCommand("manual_close");
+        }
+
+        function cancelCloseGate() {
+            document.getElementById("zoneBWarningModal").style.display = "none";
+            // No command sent — gate stays open
+        }
+
+        function dispatchGateCommand(cmd) {
+            const msg = new Paho.MQTT.Message(cmd);
+            msg.destinationName = "parking/Zone_B/barrier/command";
+            msg.qos = 1;
+            client.send(msg);
+            console.log("[GATE CMD]", cmd);
+            if (cmd === "manual_open") {
+                updateGateStatusUI("open", "manual_override");
+            } else {
+                updateGateStatusUI("closing...", "auto");
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+
+        // ── Car under gate banner logic ───────────────────────────────────────────
+        let carUnderGateTimer = null;
+
+        function showCarUnderGateBanner() {
+            const banner = document.getElementById("carUnderGateBanner");
+            banner.style.display = "flex";
+            // Auto-dismiss after 5 seconds
+            clearTimeout(carUnderGateTimer);
+            carUnderGateTimer = setTimeout(() => {
+                banner.style.display = "none";
+            }, 5000);
+        }
+
+        function dismissCarUnderGateBanner() {
+            clearTimeout(carUnderGateTimer);
+            document.getElementById("carUnderGateBanner").style.display = "none";
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+    </script>
 </body>
 </html>
