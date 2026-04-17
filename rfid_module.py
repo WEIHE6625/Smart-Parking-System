@@ -61,9 +61,11 @@ def rfid_entry():
         ).start()
         
         print("Result: APPROVED - Gate Opening")
-        lcd_display.show_success(balance, True, get_user_name(card_data))
+        test = lcd_display.show_success(balance, True, get_user_name(card_data))
+        print(f"Result: {test}")
     else:
-        lcd_display.show_denied(message)
+        test = lcd_display.show_denied(message)
+        print(f"Result: {test}")
 
     return jsonify({"status": message}), 200
 

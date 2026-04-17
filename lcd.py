@@ -74,6 +74,8 @@ class LCD:
         while True:
             job = self._queue.get()
             print(f"DEBUG: Worker picked up job type: {job['type']}", flush=True)
+            print(f"DEBUG: Worker picked up job type: {job['line1']}", flush=True)
+            print(f"DEBUG: Worker picked up job type: {job['line2']}", flush=True)
 
             if job["type"] == "temp":
                 print(f"DEBUG: Attempting to publish TEMP: {job['line1']}", flush=True)
@@ -82,6 +84,8 @@ class LCD:
                 time.sleep(job["duration"])
                 self._is_showing_temp = False # Mark as free
                 self._show_default_now()
+            elif job["type"] == "default":
+                print("DEBUG: Attempting to publish DEFAULT", flush=True)
 
             # elif job["type"] == "default":
             #     print("DEBUG: Attempting to publish DEFAULT", flush=True)
@@ -103,22 +107,33 @@ class LCD:
             greeting = f"Bye {user_name.capitalize()}!" if user_name else "Come Again!"
 
         line2 = f"RM{float(balance):.2f}"
-        self._queue.put({
-            "type": "temp",
-            "line1": greeting,
-            "line2": line2,
-            "duration": duration
-        })
+        
+        try:
+            self._queue.put_nowait({
+                "type": "temp",
+                "line1": greeting,
+                "line2": line2,
+                "duration": duration
+            })
+            return 1
+        except queue.Full:
+            return 0
 
     def show_denied(self, message, duration=2):
         with self._queue.mutex: # Clear pending default updates
             self._queue.queue.clear()
+            
         short_msg = message.replace("DENIED_", "").replace("_", " ").title()
-        self._queue.put({
-            "type": "temp",
-            "line1": "Access Denied!",
-            "line2": short_msg,
-            "duration": duration
-        })
+        
+        try:
+            self._queue.put_nowait({
+                "type": "default",
+                "line1": "Access Denied!",
+                "line2": short_msg,
+                "duration": duration
+            })
+            return 1
+        except queue.Full:
+            return 0
 
 lcd_display = LCD()
