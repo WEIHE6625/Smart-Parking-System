@@ -4,233 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Parking Dashboard</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="styles.css">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background: #f4f6f9;
-        }
-
-        .leaderboard-section {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            min-width: 300px;
-            flex: 1;
-        }
-
-        .leaderboard-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .leaderboard-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
-        }
-
-        .leaderboard-item:last-child {
-            border-bottom: none;
-        }
-
-        .user-name {
-            font-weight: bold;
-            color: #333;
-            text-transform: capitalize;
-        }
-
-        .user-spent {
-            background: #e3f2fd;
-            color: #1976d2;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        h1 {
-            margin-bottom: 20px;
-        }
-        .dashboard-container {
-            display: flex;
-            gap: 30px;
-            flex-wrap: wrap; 
-            align-items: flex-start;
-        }
-
-        .live-section {
-            flex: 1;
-            min-width: 350px;
-        }
-
-        .chart-section {
-            flex: 1;
-            min-width: 400px;
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-
-        canvas {
-            max-width: 100%;
-        }
-
-        .summary {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            margin-bottom: 24px;
-        }
-
-        .card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            min-width: 200px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            text-align: center;
-            transition: all 0.3s ease; 
-        }
-
-        .status-high { color: #2e7d32; } 
-        .status-med { color: #f57c00; } 
-        .status-full { color: #c62828; } 
-
-        #totalAvailable {
-            font-size: 48px; /* Make it massive */
-            margin: 10px 0;
-        }
-
-        .zones {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .zone-box {
-            background: white;
-            border-radius: 10px;
-            padding: 16px;
-            min-width: 320px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-
-        .slot {
-            margin: 10px 0;
-            padding: 12px;
-            border-radius: 6px;
-            font-weight: bold;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .empty { background: #4caf50; }
-        .occupied { background: #f44336; }
-
-        .small {
-            font-size: 12px;
-            font-weight: normal;
-            background: rgba(0,0,0,0.2);
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
-
-        .illegal-item {
-            margin: 10px 0;
-            padding: 12px;
-            border-radius: 6px;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .illegal-clear { background: #e0e0e0; color: #333; }
-        .illegal-detected { background: #ff9800; color: white; animation: blink 1s infinite alternate; }
-
-        @keyframes blink {
-            from { opacity: 1; }
-            to { opacity: 0.7; }
-        }
-
-        /* Modal Background Overlay */
-        .modal-overlay {
-            display: none; 
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Modal Box */
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            max-width: 400px;
-            width: 90%;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        .modal-content h2 {
-            color: #c62828;
-            margin-top: 0;
-        }
-
-        .close-btn {
-            margin-top: 20px;
-            background: #c62828;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        .close-btn:hover {
-            background: #b71c1c;
-        }
-
-        /* Class to show the modal */
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        @keyframes pulseUpdate {
-            0% { transform: scale(1); color: #1976d2; }
-            50% { transform: scale(1.2); color: #4caf50; }
-            100% { transform: scale(1); }
-        }
-
-        .pulse {
-            animation: pulseUpdate 0.4s ease-out;
-        }
-
-    </style>
 </head>
 <body>
-    <h1>Smart Parking Dashboard</h1>
-    <p>Status: <span id="liveStatus" style="font-weight:bold; color: #1976d2;">Connecting...</span></p>
+    <header style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 30px;">
+        
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <i class="fas fa-car-side fa-2x"></i>
+            <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px;">SmartPark Dashboard</h1>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;">
+            <i class="fas fa-wifi"></i> Status: 
+            <span id="liveStatus" style="color: #64ffda;">Connecting...</span>
+        </div>
+    </header>
     <div class = "dashboard-container">
         <div class = "live-section">
             <div class="summary">
                 <div class="card">
-                    <h3 style="margin-top: 0; color: #555;">Available Slots</h3>
+                    <h3><i class="fas fa-parking" style="color: #1976d2;"></i> Total Available</h3>
                     <div style="display: flex; align-items: baseline; justify-content: center; gap: 5px;">
                         <h2 id="totalAvailable" style="margin: 0; font-size: 42px;">0</h2>
                         <span style="color: #888; font-size: 18px;">/ 4</span>
@@ -288,7 +87,7 @@
                         <canvas id="earningsChart"></canvas>
             </div>
             <div class="leaderboard-section">
-                <h2 style="margin-top: 0; color: #333;">Top Spenders</h2>
+                <h2 style="margin-top: 0;"><i class="fas fa-trophy" style="color: #fbc02d;"></i> Top Spenders</h2>
                 <ul id="topSpendersList" class="leaderboard-list">
                     <li>Loading leaderboard...</li>
                 </ul>
@@ -553,10 +352,17 @@
         // --- UI UPDATE FUNCTIONS (Unchanged) ---
         function updateSlot(slotId, slotData) {
             const el = document.getElementById(slotId);
+            
+            // Check if it's occupied to change the icon
+            const icon = slotData.status === 'occupied' 
+                ? '<i class="fas fa-car fa-2x" style="margin-bottom: 8px;"></i>' 
+                : '<i class="fas fa-check-circle fa-2x" style="margin-bottom: 8px; opacity: 0.5;"></i>';
+
             el.className = "slot " + slotData.status;
             el.innerHTML = `
-                ${slotId} - ${slotData.status}
-                <span class="small">Distance: ${slotData.distance} cm</span>
+                ${icon}
+                <div>${slotId}</div>
+                <div class="distance-badge">${slotData.distance} cm</div>
             `;
         }
 
