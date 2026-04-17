@@ -277,4 +277,4 @@ def start_mqtt_listener():
 def get_current_parking_total_available():
     return parking_state["TOTAL_AVAILABLE"]
 
-lcd_display.set_available_provider(get_current_parking_total_available())
+lcd_display.set_available_provider(get_current_parking_total_available)
