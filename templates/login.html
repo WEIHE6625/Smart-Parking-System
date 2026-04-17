@@ -9,6 +9,21 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+
+        .input-group .toggle-password {
+            left: auto; 
+            right: 15px; 
+            cursor: pointer; 
+            z-index: 10; 
+        }
+
+        .input-group .toggle-password:hover {
+            color: #1976d2;
+        }
+
+        #passwordInput {
+            padding-right: 45px;
+        }
         * {
             box-sizing: border-box;
             margin: 0;
@@ -161,8 +176,9 @@
         </div>
 
         <div class="input-group">
-            <input type="password" name="password" placeholder="Password" required>
+            <input type="password" id="passwordInput" name="password" placeholder="Password" required>
             <i class="fas fa-lock"></i>
+            <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility()"></i>
         </div>
 
         <button type="submit" class="btn-login">Sign In</button>
@@ -172,6 +188,25 @@
         Don't have an account? <span>Register here</span>
     </a>
 </div>
+
+<script>
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById("passwordInput");
+        const toggleIcon = document.querySelector(".toggle-password");
+
+        if (passwordInput.type === "password") {
+            // Show password
+            passwordInput.type = "text";
+            toggleIcon.classList.remove("fa-eye");
+            toggleIcon.classList.add("fa-eye-slash");
+        } else {
+            // Hide password
+            passwordInput.type = "password";
+            toggleIcon.classList.remove("fa-eye-slash");
+            toggleIcon.classList.add("fa-eye");
+        }
+    }
+</script>
 
 </body>
 </html>

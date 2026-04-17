@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!--<link rel="stylesheet" href="C:\Users\Taruc\Documents\GitHub\Smart-Parking-System\static\styles.css">-->
+    <link rel="stylesheet" href="C:\Users\Taruc\Documents\GitHub\Smart-Parking-System\static\styles.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
@@ -42,7 +42,13 @@
                     </div>
 
                     <div class="zone-box" id="zoneABox">
-                        <h2 style="margin-top: 0; font-size: 20px;">Zone A (Slots: <span id="zoneAAvailable">0</span>)</h2>
+                        <div class="zone-header">
+                            <h2 style="margin: 0; font-size: 20px;">Zone A</h2>
+                            <div class="slot-badge">
+                                <i class="fas fa-parking"></i>
+                                <span id="zoneAAvailable">0</span> Available
+                            </div>
+                        </div>
                         <div class="slot-grid">
                             
                             <div id="Slot_A1" class="slot empty">
@@ -61,7 +67,13 @@
                     </div>
 
                     <div class="zone-box" id="zoneBBox">
-                        <h2 style="margin-top: 0; font-size: 20px;">Zone B (Slots: <span id="zoneBAvailable">0</span>)</h2>
+                        <div class="zone-header">
+                            <h2 style="margin: 0; font-size: 20px;">Zone B</h2>
+                            <div class="slot-badge">
+                                <i class="fas fa-parking"></i>
+                                <span id="zoneBAvailable">0</span> Available
+                            </div>
+                        </div>
                         <div class="slot-grid">
                             
                             <div id="Slot_B1" class="slot empty">
@@ -98,7 +110,7 @@
             </div>
 
 
-            <div id="gateControlPanel" style="background: #fff; border-radius: 12px; padding: 20px 25px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); margin-top: 20px; max-width: 650px;">
+            <div id="gateControlPanel" style="background: #fff; border-radius: 12px; padding: 20px 25px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); margin-top: 20px;">
                 <h3 style="margin-top: 0; color: #555;"><i class="fas fa-barrier" style="color: #1976d2;"></i> Zone B Barrier — Manual Control</h3>
                 <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -123,18 +135,28 @@
             </div>
             <div class="chart-section centered-chart">
                 <h2 style="margin-top: 0; color: #333;">Daily Parking Earnings</h2>
-                <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <div>
-                        <label for="startDate" style="font-size: 14px; font-weight: bold;">From:</label>
-                        <input type="date" id="startDate" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
+                    <div style="margin-bottom: 25px; display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                        
+                        <div style="display: flex; gap: 10px; flex-wrap: nowrap; justify-content: center;">
+                            <div>
+                                <label for="startDate" style="font-size: 14px; font-weight: bold; color: #555;">From:</label>
+                                <input type="date" id="startDate" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-family: inherit;">
+                            </div>
+                            <div>
+                                <label for="endDate" style="font-size: 14px; font-weight: bold; color: #555;">To:</label>
+                                <input type="date" id="endDate" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-family: inherit;">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 12px; justify-content: center;">
+                            <button onclick="applyDateFilter()" style="padding: 10px 24px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; transition: background 0.2s;">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                            <button onclick="resetDateFilter()" style="padding: 10px 24px; background: #9e9e9e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; transition: background 0.2s;">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                        </div>
                     </div>
-                    <div>
-                        <label for="endDate" style="font-size: 14px; font-weight: bold;">To:</label>
-                        <input type="date" id="endDate" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
-                    </div>
-                    <button onclick="applyDateFilter()" style="padding: 6px 12px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Filter</button>
-                    <button onclick="resetDateFilter()" style="padding: 6px 12px; background: #9e9e9e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Reset</button>
-                </div>
                 <div class="canvas-wrapper">
                     <canvas id="earningsChart"></canvas>
                 </div>
@@ -148,13 +170,6 @@
         </div>
     </div>
 
-    <div id="illegalModal" class="modal-overlay">
-        <div class="modal-content">
-            <h2>🚨 WARNING 🚨</h2>
-            <p id="modalMessage" style="font-size: 18px; font-weight: bold;"></p>
-            <button class="close-btn" onclick="closeModal()">Dismiss</button>
-        </div>
-    </div>
     <script>
         // HiveMQ Cloud WebSocket connection details
         const MQTT_BROKER = "dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud";
@@ -247,11 +262,6 @@
                 document.getElementById("zoneABox").classList.toggle("zone-illegal", isIllegalA);
                 document.getElementById("zoneBBox").classList.toggle("zone-illegal", isIllegalB);
                 
-                if ((isIllegalA && !wasIllegalA) || (isIllegalB && !wasIllegalB)) {
-                    showModal(buildIllegalMessage(data.ILLEGAL_PARKING));
-                }
-                wasIllegalA = isIllegalA;
-                wasIllegalB = isIllegalB;
                 
             } catch (e) {
                 console.error("Error parsing MQTT payload or updating UI:", e);
@@ -395,37 +405,15 @@
             }
         }
 
-        function buildIllegalMessage(illegalData) {
-            let zones = [];
-            if (illegalData.Zone_A.detected) zones.push("Slot A1 & A2");
-            if (illegalData.Zone_B.detected) zones.push("Zone B1 & B2");
-            
-            const locationText = zones.join(" and ");
-            return `Illegal Parking Detected at ${locationText}!`;
-        }
-
-        function showModal(message) {
-            const modal = document.getElementById("illegalModal");
-            const modalMessage = document.getElementById("modalMessage");
-
-            modalMessage.textContent = message;
-            modal.classList.add("show");
-        }
-
-        function closeModal() {
-            document.getElementById("illegalModal").classList.remove("show");
-        }
     </script>   
 
 
 
     <script>
         let earningsChartInstance = null;
-            let allDates = [];
-            let allEarnings = [];
+        let rawHistoryData = {}; // Store the raw data globally so we can re-filter it anytime
 
         async function fetchDashboardData() {
-
             const url = "https://spsystem-44375-default-rtdb.asia-southeast1.firebasedatabase.app/.json";
             
             try {
@@ -434,7 +422,11 @@
                 
                 if (!data) return;
 
-                processChartData(data.Parking_History);
+                // Store the raw history data
+                rawHistoryData = data.Parking_History || {};
+
+                // Process chart for all-time daily view by default
+                processAndRenderChart(null, null);
 
                 processLeaderboardData(data);
 
@@ -443,24 +435,132 @@
             }
         }
 
-        function processChartData(historyData) {
-        if (!historyData) return;
-        
-        const dailyEarnings = {};
+        function processAndRenderChart(startDateStr, endDateStr) {
+            let groupedData = {};
+            let isHourly = false;
 
-        for (const key in historyData) {
-            const session = historyData[key];
-            if (session.Exit_Time && session.Fee_Paid !== undefined) {
-                const date = session.Exit_Time.substring(0, 10);
-                if (!dailyEarnings[date]) dailyEarnings[date] = 0;
-                dailyEarnings[date] += Number(session.Fee_Paid);
+            // Check if the user selected the exact same date for "From" and "To"
+            if (startDateStr && endDateStr && startDateStr === endDateStr) {
+                isHourly = true;
+                // Pre-fill the 24 hours (00:00 to 23:00) so the graph doesn't have gaps
+                for (let i = 0; i < 24; i++) {
+                    let hourStr = i.toString().padStart(2, '0') + ":00";
+                    groupedData[hourStr] = 0;
+                }
             }
+
+            // Loop through the raw data
+            for (const key in rawHistoryData) {
+                const session = rawHistoryData[key];
+                
+                if (session.Exit_Time && session.Fee_Paid !== undefined) {
+                    const fullDateStr = session.Exit_Time; // Expected format: "YYYY-MM-DD HH:MM:SS"
+                    const datePart = fullDateStr.substring(0, 10); 
+                    const hourPart = fullDateStr.substring(11, 13) + ":00"; 
+
+                    let isAfterStart = !startDateStr || datePart >= startDateStr;
+                    let isBeforeEnd = !endDateStr || datePart <= endDateStr;
+
+                    // If the record falls within our selected dates
+                    if (isAfterStart && isBeforeEnd) {
+                        if (isHourly) {
+                            // Group by Hour
+                            if (datePart === startDateStr) {
+                                groupedData[hourPart] += Number(session.Fee_Paid);
+                            }
+                        } else {
+                            // Group by Day
+                            if (!groupedData[datePart]) groupedData[datePart] = 0;
+                            groupedData[datePart] += Number(session.Fee_Paid);
+                        }
+                    }
+                }
+            }
+
+            // Extract sorted labels and data points
+            const labels = Object.keys(groupedData).sort();
+            const dataPoints = labels.map(label => groupedData[label]);
+
+            // Change the X-Axis title based on the view
+            const xAxisLabel = isHourly ? `Time (Hourly for ${startDateStr})` : 'Date';
+
+            renderChart(labels, dataPoints, xAxisLabel, isHourly);
         }
 
-        allDates = Object.keys(dailyEarnings).sort();
-        allEarnings = allDates.map(date => dailyEarnings[date]);
-        renderChart(allDates, allEarnings); 
-        }   
+        function renderChart(labels, dataPoints, xAxisTitle, isHourly) {
+            const ctx = document.getElementById('earningsChart').getContext('2d');
+            
+            if (earningsChartInstance) {
+                earningsChartInstance.destroy();
+            }
+
+            earningsChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Fee Paid (RM)',
+                        data: dataPoints,
+                        borderColor: '#2ca02c',
+                        backgroundColor: 'rgba(44, 160, 44, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 5,
+                        hitRadius: 15,
+                        hoverRadius: 8,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Ensures it looks good on mobile
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            title: { display: true, text: 'RM' } 
+                        },
+                        x: { 
+                            title: { display: true, text: xAxisTitle },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                // If it's hourly, allow more labels to show. If daily, limit to 6 so mobile doesn't overlap.
+                                maxTicksLimit: isHourly ? 12 : 6 
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                boxWidth: 12,
+                                font: { size: 13 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function applyDateFilter() {
+            const startDateStr = document.getElementById('startDate').value;
+            const endDateStr = document.getElementById('endDate').value;
+
+            if (!startDateStr && !endDateStr) {
+                alert("Please select at least one date to filter.");
+                return;
+            }
+
+            // Call our new dynamic chart processor
+            processAndRenderChart(startDateStr, endDateStr);
+        }
+
+        function resetDateFilter() {
+            document.getElementById('startDate').value = "";
+            document.getElementById('endDate').value = "";
+            
+            // Pass null to show all-time daily data
+            processAndRenderChart(null, null);
+        }
 
         function processLeaderboardData(data) {
             const history = data.Parking_History || {};
@@ -521,72 +621,6 @@
                 `;
                 listElement.appendChild(listItem);
             });
-        }
-
-        function renderChart(labels, dataPoints) {
-            const ctx = document.getElementById('earningsChart').getContext('2d');
-            
-            if (earningsChartInstance) {
-                earningsChartInstance.destroy();
-            }
-
-            earningsChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Total Fee Paid (RM)',
-                        data: dataPoints,
-                        borderColor: '#2ca02c',
-                        backgroundColor: 'rgba(44, 160, 44, 0.1)',
-                        borderWidth: 2,
-                        pointRadius: 4,
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: { beginAtZero: true, title: { display: true, text: 'RM' } },
-                        x: { title: { display: true, text: 'Date' } }
-                    }
-                }
-            });
-        }
-
-        function applyDateFilter() {
-            const startDateStr = document.getElementById('startDate').value;
-            const endDateStr = document.getElementById('endDate').value;
-
-            if (!startDateStr && !endDateStr) {
-                alert("Please select at least one date to filter.");
-                return;
-            }
-
-            let filteredDates = [];
-            let filteredEarnings = [];
-
-            for (let i = 0; i < allDates.length; i++) {
-                const currentDate = allDates[i];
-                
-                let isAfterStart = !startDateStr || currentDate >= startDateStr;
-                let isBeforeEnd = !endDateStr || currentDate <= endDateStr;
-
-                if (isAfterStart && isBeforeEnd) {
-                    filteredDates.push(currentDate);
-                    filteredEarnings.push(allEarnings[i]);
-                }
-            }
-
-            renderChart(filteredDates, filteredEarnings);
-        }
-
-        function resetDateFilter() {
-            document.getElementById('startDate').value = "";
-            document.getElementById('endDate').value = "";
-            
-            renderChart(allDates, allEarnings);
         }
 
         fetchDashboardData();
