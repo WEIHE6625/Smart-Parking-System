@@ -74,8 +74,7 @@ class LCD:
         while True:
             job = self._queue.get()
             print(f"DEBUG: Worker picked up job type: {job['type']}", flush=True)
-            print(f"DEBUG: Worker picked up job type: {job['line1']}", flush=True)
-            print(f"DEBUG: Worker picked up job type: {job['line2']}", flush=True)
+            print(f"DEBUG: Worker picked up job: {job}", flush=True)
 
             if job["type"] == "temp":
                 print(f"DEBUG: Attempting to publish TEMP: {job['line1']}", flush=True)
@@ -84,13 +83,11 @@ class LCD:
                 time.sleep(job["duration"])
                 self._is_showing_temp = False # Mark as free
                 self._show_default_now()
+
             elif job["type"] == "default":
                 print("DEBUG: Attempting to publish DEFAULT", flush=True)
-
-            # elif job["type"] == "default":
-            #     print("DEBUG: Attempting to publish DEFAULT", flush=True)
-            #     if not self._is_showing_temp:
-            #         self._show_default_now()
+                if not self._is_showing_temp:
+                    self._show_default_now()
 
             self._queue.task_done()
 
@@ -127,7 +124,7 @@ class LCD:
         
         try:
             self._queue.put_nowait({
-                "type": "default",
+                "type": "temp",
                 "line1": "Access Denied!",
                 "line2": short_msg,
                 "duration": duration
