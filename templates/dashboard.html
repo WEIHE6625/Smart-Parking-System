@@ -13,7 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
 </head>
 <body>
-    <header style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 30px;">
+    <header style="width:100%; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 30px;">
         
         <div style="display: flex; align-items: center; gap: 15px;">
             <i class="fas fa-car-side fa-2x"></i>
@@ -26,51 +26,54 @@
         </div>
     </header>
     <div class = "dashboard-container">
-        <div class = "live-section">
-            <div class="summary">
-                <div class="card">
-                    <h3><i class="fas fa-parking" style="color: #1976d2;"></i> Total Available</h3>
-                    <div style="display: flex; align-items: baseline; justify-content: center; gap: 5px;">
-                        <h2 id="totalAvailable" style="margin: 0; font-size: 42px;">0</h2>
-                        <span style="color: #888; font-size: 18px;">/ 4</span>
+            <div class = "live-section">
+                <div class="status-row">
+                        
+                        <div class="card">
+                            <h3 style="margin-top: 0; color: #555;"><i class="fas fa-parking" style="color: #1976d2;"></i> Total Available</h3>
+                            <div style="display: flex; align-items: baseline; justify-content: center; gap: 5px;">
+                                <h2 id="totalAvailable" style="margin: 0; font-size: 48px;">0</h2>
+                                <span style="color: #888; font-size: 18px;">/ 4</span>
+                            </div>
+                            <div style="width: 100%; background: #e0e0e0; height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
+                                <div id="availabilityBar" style="width: 0%; height: 100%; background: #2e7d32; transition: all 0.5s ease;"></div>
+                            </div>
+                        </div>
+
+                        <div class="zone-box">
+                            <h2 style="margin-top: 0; font-size: 20px;">Zone A (Slots: <span id="zoneAAvailable">0</span>)</h2>
+                            <div class="slot-grid">
+                                <div id="Slot_A1" class="slot empty">...</div>
+                                <div id="Slot_A2" class="slot empty">...</div>
+                            </div>
+                        </div>
+
+                        <div class="zone-box">
+                            <h2 style="margin-top: 0; font-size: 20px;">Zone B (Slots: <span id="zoneBAvailable">0</span>)</h2>
+                            <div class="slot-grid">
+                                <div id="Slot_B1" class="slot empty">...</div>
+                                <div id="Slot_B2" class="slot empty">...</div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                <div id="illegalStatusContainer" style="display: none; background: #ffebee; border: 2px solid #c62828; padding: 15px; border-radius: 8px; margin-top: 20px; max-width: 650px;">
+                    <h3 style="color: #c62828; margin-top: 0;">🚨 Illegal Parking Status 🚨</h3>
+                    
+                    <div id="illegalZoneA" class="illegal-item illegal-clear">
+                        Slot A1 & A2 - CLEAR
+                        <span class="small">Distance: 0 cm</span>
                     </div>
                     
-                    <div style="width: 100%; background: #e0e0e0; height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
-                        <div id="availabilityBar" style="width: 0%; height: 100%; background: #2e7d32; transition: width 0.5s ease, background 0.5s ease;"></div>
+                    <div id="illegalZoneB" class="illegal-item illegal-clear">
+                        Slot B1 & B2 - CLEAR
+                        <span class="small">Distance: 0 cm</span>
                     </div>
                 </div>
             </div>
 
-            <div class="zones">
-                <div class="zone-box">
-                    <h2>Zone A (Slots: <span id="zoneAAvailable">0</span>)</h2>
-                    <div id="Slot_A1" class="slot empty">Slot A1 - empty<span class="small">Distance: 0 cm</span></div>
-                    <div id="Slot_A2" class="slot empty">Slot A2 - empty<span class="small">Distance: 0 cm</span></div>
-                </div>
-
-                <div class="zone-box">
-                    <h2>Zone B (Slots: <span id="zoneBAvailable">0</span>)</h2>
-                    <div id="Slot_B1" class="slot empty">Slot B1 - empty<span class="small">Distance: 0 cm</span></div>
-                    <div id="Slot_B2" class="slot empty">Slot B2 - empty<span class="small">Distance: 0 cm</span></div>
-                </div>
-            </div>
-
-            <div id="illegalStatusContainer" style="display: none; background: #ffebee; border: 2px solid #c62828; padding: 15px; border-radius: 8px; margin-top: 20px; max-width: 650px;">
-                <h3 style="color: #c62828; margin-top: 0;">🚨 Illegal Parking Status 🚨</h3>
-                
-                <div id="illegalZoneA" class="illegal-item illegal-clear">
-                    Slot A1 & A2 - CLEAR
-                    <span class="small">Distance: 0 cm</span>
-                </div>
-                
-                <div id="illegalZoneB" class="illegal-item illegal-clear">
-                    Slot B1 & B2 - CLEAR
-                    <span class="small">Distance: 0 cm</span>
-                </div>
-            </div>
-        </div>
-        <div style = "display:flex;flex-direction: column;gap: 20px;flex: 1;min-width: 400px;">
-        <div class="chart-section">
+            <div class="chart-section centered-chart">
                 <h2 style="margin-top: 0; color: #333;">Daily Parking Earnings</h2>
                 <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <div>
@@ -84,7 +87,9 @@
                     <button onclick="applyDateFilter()" style="padding: 6px 12px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Filter</button>
                     <button onclick="resetDateFilter()" style="padding: 6px 12px; background: #9e9e9e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Reset</button>
                 </div>
-                        <canvas id="earningsChart"></canvas>
+                <div class="canvas-wrapper">
+                    <canvas id="earningsChart"></canvas>
+                </div>
             </div>
             <div class="leaderboard-section">
                 <h2 style="margin-top: 0;"><i class="fas fa-trophy" style="color: #fbc02d;"></i> Top Spenders</h2>
@@ -102,134 +107,6 @@
             <button class="close-btn" onclick="closeModal()">Dismiss</button>
         </div>
     </div>
-
-    <!-- <script>
-        function connectSSE() {
-            const source = new EventSource("/stream");
-
-            let wasIllegalA = false;
-            let wasIllegalB = false;
-
-            source.onopen = function () {
-                document.getElementById("liveStatus").textContent = "Connected";
-                document.getElementById("liveStatus").style.color = "#4caf50";
-            };
-
-            source.onmessage = function (event) {
-                console.log("RAW EVENT:", event.data);
-
-                const data = JSON.parse(event.data);
-                console.log("PARSED:", data);
-                // ... all your existing update logic stays the same ...
-                document.getElementById("totalAvailable").textContent = data.TOTAL_AVAILABLE;
-                document.getElementById("zoneAAvailable").textContent = data.ZONE_AVAILABLE.Zone_A;
-                document.getElementById("zoneBAvailable").textContent = data.ZONE_AVAILABLE.Zone_B;
-
-                updateSlot("Slot_A1", data.SLOTS.Zone_A.Slot_A1);
-                updateSlot("Slot_A2", data.SLOTS.Zone_A.Slot_A2);
-                updateSlot("Slot_B1", data.SLOTS.Zone_B.Slot_B1);
-                updateSlot("Slot_B2", data.SLOTS.Zone_B.Slot_B2);
-
-                updateIllegalZone("illegalZoneA", "Slot A1 & A2", data.ILLEGAL_PARKING.Zone_A);
-                updateIllegalZone("illegalZoneB", "Slot B1 & B2", data.ILLEGAL_PARKING.Zone_B);
-                handleAlert(data);
-
-                const isIllegalA = data.ILLEGAL_PARKING.Zone_A.detected;
-                const isIllegalB = data.ILLEGAL_PARKING.Zone_B.detected;
-                if ((isIllegalA && !wasIllegalA) || (isIllegalB && !wasIllegalB)) {
-                    showModal(buildIllegalMessage(data.ILLEGAL_PARKING));
-                }
-                wasIllegalA = isIllegalA;
-                wasIllegalB = isIllegalB;
-            };
-
-            source.onerror = function () {
-                document.getElementById("liveStatus").textContent = "Reconnecting...";
-                document.getElementById("liveStatus").style.color = "#f44336";
-                source.close();
-                // Reconnect after 3 seconds
-                setTimeout(connectSSE, 1000);
-            };
-        }
-
-        connectSSE();
-
-        function updateSlot(slotId, slotData) {
-            const el = document.getElementById(slotId);
-            el.className = "slot " + slotData.status;
-            el.innerHTML = `
-                ${slotId} - ${slotData.status}
-                <span class="small">Distance: ${slotData.distance} cm</span>
-            `;
-        }
-
-        function updateIllegalZone(elementId, zoneLabel, illegalData) {
-            const el = document.getElementById(elementId);
-            const detected = illegalData && illegalData.detected;
-            const distance = illegalData ? illegalData.distance : 0;
-
-            el.className = "illegal-item " + (detected ? "illegal-detected" : "illegal-clear");
-            el.innerHTML = `
-                ${zoneLabel} - ${detected ? "DETECTED" : "CLEAR"}
-                <span class="small">Distance: ${distance} cm</span>
-            `;
-        }
-
-        function handleAlert(data) {
-            const container = document.getElementById("illegalStatusContainer");
-            const elA = document.getElementById("illegalZoneA");
-            const elB = document.getElementById("illegalZoneB");
-            
-            const isA = data.ILLEGAL_PARKING?.Zone_A?.detected || false;
-            const isB = data.ILLEGAL_PARKING?.Zone_B?.detected || false;
-
-            if (isA) {
-                elA.style.display = "flex";
-                const distA = document.querySelector("#illegalZoneA .small");
-                if(distA) distA.textContent = `Distance: ${data.ILLEGAL_PARKING.Zone_A.distance} cm`;
-            } else {
-                elA.style.display = "none";
-            }
-
-            if (isB) {
-                elB.style.display = "flex";
-                const distB = document.querySelector("#illegalZoneB .small");
-                if(distB) distB.textContent = `Distance: ${data.ILLEGAL_PARKING.Zone_B.distance} cm`;
-            } else {
-                elB.style.display = "none";
-            }
-
-            if (isA || isB) {
-                container.style.display = "block";
-            } else {
-                container.style.display = "none";
-            }
-        }
-
-        // --- POPUP MODAL FUNCTIONS ---
-
-        function buildIllegalMessage(illegalData) {
-            let zones = [];
-            if (illegalData.Zone_A.detected) zones.push("Slot A1 & A2");
-            if (illegalData.Zone_B.detected) zones.push("Zone B1 & B2");
-            
-            const locationText = zones.join(" and ");
-            return `Illegal Parking Detected at ${locationText}!`;
-        }
-
-        function showModal(message) {
-            const modal = document.getElementById("illegalModal");
-            const modalMessage = document.getElementById("modalMessage");
-
-            modalMessage.textContent = message;
-            modal.classList.add("show");
-        }
-
-        // Function to hide the modal when "Dismiss" is clicked
-        function closeModal() {
-            document.getElementById("illegalModal").classList.remove("show");
-        }
-    </script> -->
     <script>
         // HiveMQ Cloud WebSocket connection details
         const MQTT_BROKER = "dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud";

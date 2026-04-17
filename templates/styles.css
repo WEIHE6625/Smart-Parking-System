@@ -1,31 +1,40 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
     font-family: 'Poppins', sans-serif;
     margin: 0;
     background: #f0f2f5;
     color : #333;
+    overflow-x: hidden;
 }
 
 .leaderboard-section {
+    width: 100%; 
     background: white;
     border-radius: 10px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    min-width: 300px;
-    flex: 1;
 }
 
 .leaderboard-list {
     list-style: none;
     padding: 0;
     margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
 }
 
 .leaderboard-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #eee;
+    padding: 12px;
+    border: 1px solid #eee; 
+    border-radius: 8px;
+    background: #fafafa;
 }
 
 .leaderboard-item:last-child {
@@ -52,23 +61,23 @@ h1 {
 }
 .dashboard-container {
     display: flex;
+    flex-direction: column;
     gap: 30px;
-    flex-wrap: wrap; 
-    align-items: flex-start;
+    padding: 0 20px 20px 20px;
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
 .live-section {
-    flex: 1;
-    min-width: 350px;
+    min-width: 280px;
 }
 
+
 .chart-section {
-    flex: 1;
-    min-height: 200px;
-    min-width: 400px;
+    width: 100%; 
     background: white;
     border-radius: 10px;
-    padding: 20px;
+    padding: 30px 20px; 
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
@@ -76,16 +85,25 @@ canvas {
     max-width: 100%;
 }
 
-.summary {
+.canvas-wrapper {
+    width: 100%;
+    max-width: 900px; /* Stops the graph from getting absurdly wide on 4K monitors */
+    margin: 0 auto;   /* Keeps the canvas wrapper centered */
+}
+
+
+
+.centered-chart {
     display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin-bottom: 24px;
+    flex-direction: column;
+    align-items: center; /* Centers items horizontally */
+    text-align: center;  /* Centers the text/title */
 }
 
 .card {
     background: white;
     border-radius: 10px;
+    margin : auto;
     padding: 20px;
     min-width: 200px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -98,26 +116,62 @@ canvas {
 .status-full { color: #c62828; } 
 
 #totalAvailable {
-    font-size: 48px; /* Make it massive */
+    font-size: 48px; 
     margin: 10px 0;
 }
 
-.zones {
+.status-row {
     display: flex;
     gap: 20px;
-    flex-wrap: wrap;
+    flex-wrap: wrap; /* Allows stacking on mobile */
+    margin-bottom: 24px;
+    align-items: stretch; /* Forces all boxes to be the exact same height */
+}
+
+
+.card {
+    flex: 1; 
+    max-width: 220px;
+    min-width: 200px;
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Keeps the number vertically centered */
+}
+
+.zone-box {
+    flex: 2; 
+    min-width: 280px;
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
 }
 
 .zone-box {
     background: white;
     border-radius: 10px;
     padding: 16px;
+    flex:1;
     min-width: 320px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
+
+.slot-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Creates two equal-width columns */
+    gap: 15px; /* Space between the slots */
+}
+
 .slot {
-    margin: 10px 0;
+    margin: 0; /* Changed from "10px 0" because the grid gap handles spacing now */
     padding: 20px 10px;
     border: 3px dashed #bdbdbd; 
     border-radius: 8px;
@@ -129,7 +183,6 @@ canvas {
     align-items: center;
     justify-content: center;
     min-height: 80px;
-    background-color: #fafafa;
 }
 
 .slot_occupied{
