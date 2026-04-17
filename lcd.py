@@ -53,13 +53,15 @@ class LCD:
         line1 = self._safe_text(line1)
         line2 = self._safe_text(line2)
 
-        print(f"Line 1: {line1} | Line 2: {line2}")
+        print(f"[PID {os.getpid()}] Line 1: {line1} | Line 2: {line2}", flush=True)
         # Check timing and dedup OUTSIDE the lock
         now = time.time()
         with self._lock:
             if line1 == self._last_line1 and line2 == self._last_line2:
+                print(f"Same || Line 1: {line1} | Line 2: {line2}")
                 return
             elapsed = now - self._last_update_time
+            print(f"Else || Line 1: {line1} | Line 2: {line2}")
         
         print("State 1")
         # Sleep OUTSIDE the lock so MQTT thread isn't blocked
@@ -70,6 +72,7 @@ class LCD:
         payload = json.dumps({"line1": line1, "line2": line2})  
         self.mqtt_client.publish("parking/lcd/display", payload)
         print("State 3")
+
         with self._lock:
             self._last_line1 = line1
             self._last_line2 = line2
