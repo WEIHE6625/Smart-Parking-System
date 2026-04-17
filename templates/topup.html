@@ -3,44 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Parking - Dashboard</title>
+    <title>Smart Parking - Wallet</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 50px; }
-        .container { max-width: 400px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; }
-        h2 { color: #333; margin-bottom: 5px; }
-        .card-id { color: #666; font-size: 14px; margin-bottom: 20px; }
-        .balance-box { background-color: #e9ecef; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .balance { font-size: 32px; font-weight: bold; color: #28a745; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
-        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        button:hover { background-color: #0056b3; }
-        .success { color: green; font-weight: bold; margin-bottom: 15px; }
-        .logout { display: inline-block; margin-top: 20px; color: #dc3545; text-decoration: none; font-weight: bold; }
-        .logout:hover { text-decoration: underline; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Center everything with the brand gradient background */
+        body {
+            background: linear-gradient(135deg, #f0f2f5 0%, #e0e5ec 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .wallet-container {
+            background: white;
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .wallet-header {
+            margin-bottom: 25px;
+        }
+
+        .wallet-header i {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .wallet-header h2 {
+            color: #333;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        /* The Balance Card styling */
+        .balance-card {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 25px 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 6px 15px rgba(30, 60, 114, 0.2);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Adds a subtle geometric pattern/shine to the card */
+        .balance-card::after {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 150px;
+            height: 150px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        .card-id-badge {
+            background: rgba(255, 255, 255, 0.2);
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+
+        .balance-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .balance-amount {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        /* Form Styling */
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            bottom: 14px; /* Adjust based on padding */
+            color: #999;
+            transition: color 0.3s;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            background: #fafafa;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            border-color: #1976d2;
+            background: white;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+        }
+
+        .input-group input:focus + i {
+            color: #1976d2;
+        }
+
+        .btn-topup {
+            width: 100%;
+            padding: 14px;
+            background: #2e7d32; /* Success Green */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-topup:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(46, 125, 50, 0.3);
+            background: #276b2a;
+        }
+
+        .success-box {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #c8e6c9;
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .logout-link {
+            display: inline-block;
+            margin-top: 25px;
+            color: #d32f2f;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: opacity 0.3s;
+        }
+
+        .logout-link:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>My Parking Wallet</h2>
-    <div class="card-id">Card ID: {{ card_id }}</div>
+<div class="wallet-container">
+    
+    <div class="wallet-header">
+        <i class="fas fa-wallet fa-3x"></i>
+        <h2>My Parking Wallet</h2>
+    </div>
     
     {% if success %}
-        <div class="success">{{ success }}</div>
+        <div class="success-box">
+            <i class="fas fa-check-circle" style="margin-right: 5px;"></i> {{ success }}
+        </div>
     {% endif %}
 
-    <div class="balance-box">
-        <div>Current Balance</div>
-        <div class="balance">RM {{ "%.2f"|format(balance) }}</div>
+    <div class="balance-card">
+        <div class="card-id-badge">
+            <i class="fas fa-id-card" style="margin-right: 5px;"></i> Card ID: {{ card_id }}
+        </div>
+        <div class="balance-label">Current Balance</div>
+        <div class="balance-amount">RM {{ "%.2f"|format(balance) }}</div>
     </div>
 
     <form action="/topup" method="POST">
-        <label style="text-align: left; display: block;">Top-Up Amount (RM):</label>
-        <input type="number" name="amount" min="1" step="0.01" placeholder="Enter amount" required>
-        <button type="submit">Top Up Now</button>
+        <div class="input-group">
+            <label>Top-Up Amount (RM):</label>
+            <input type="number" name="amount" min="1" step="0.01" placeholder="Enter amount to reload" required>
+            <i class="fas fa-coins"></i>
+        </div>
+
+        <button type="submit" class="btn-topup">
+            <i class="fas fa-plus-circle" style="margin-right: 5px;"></i> Top Up Now
+        </button>
     </form>
 
-    <a href="/logout" class="logout">Logout</a>
+    <a href="/logout" class="logout-link">
+        <i class="fas fa-sign-out-alt" style="margin-right: 5px;"></i> Logout
+    </a>
 </div>
 
 </body>

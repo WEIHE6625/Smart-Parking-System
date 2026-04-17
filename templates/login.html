@@ -4,37 +4,173 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Parking - Login</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 50px; }
-        .container { max-width: 400px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        button:hover { background-color: #0056b3; }
-        .error { color: red; text-align: center; margin-bottom: 10px; }
-        .link { display: block; text-align: center; margin-top: 15px; font-size: 14px; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f0f2f5 0%, #e0e5ec 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            width: 100%;
+            max-width: 400px;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header i {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .login-header h2 {
+            color: #333;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            transition: color 0.3s;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fafafa;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            border-color: #1976d2;
+            background: white;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+        }
+
+        .input-group input:focus + i, 
+        .input-group input:not(:placeholder-shown) + i {
+            color: #1976d2;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-top: 10px;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(30, 60, 114, 0.3);
+        }
+
+        .error-box {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ffcdd2;
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .register-link {
+            display: block;
+            text-align: center;
+            margin-top: 25px;
+            font-size: 14px;
+            color: #666;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .register-link span {
+            color: #1976d2;
+            font-weight: 600;
+        }
+
+        .register-link:hover span {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>SPS Login</h2>
+<div class="login-container">
+    <div class="login-header">
+        <i class="fas fa-car-side fa-3x"></i>
+        <h2>SmartPark Login</h2>
+        <p style="color: #666; font-size: 14px; margin-top: 5px;">Welcome back to SmartPark</p>
+    </div>
     
     {% if error %}
-        <div class="error">{{ error }}</div>
+        <div class="error-box">
+            <i class="fas fa-exclamation-circle" style="margin-right: 5px;"></i> {{ error }}
+        </div>
     {% endif %}
 
     <form action="/login" method="POST">
-        <label>Email Address:</label>
-        <input type="email" name="email" required>
+        
+        <div class="input-group">
+            <input type="email" name="email" placeholder="Email Address" required>
+            <i class="fas fa-envelope"></i>
+        </div>
 
-        <label>Password:</label>
-        <input type="password" name="password" required>
+        <div class="input-group">
+            <input type="password" name="password" placeholder="Password" required>
+            <i class="fas fa-lock"></i>
+        </div>
 
-        <button type="submit">Login</button>
+        <button type="submit" class="btn-login">Sign In</button>
     </form>
     
-    <a href="{{ url_for('auth.register') }}" class="link">Don't have an account?</a>
+    <a href="{{ url_for('auth.register') }}" class="register-link">
+        Don't have an account? <span>Register here</span>
+    </a>
 </div>
 
 </body>

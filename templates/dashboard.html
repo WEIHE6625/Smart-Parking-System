@@ -73,6 +73,30 @@
                 </div>
             </div>
 
+
+            <div id="gateControlPanel" style="background: #fff; border-radius: 12px; padding: 20px 25px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); margin-top: 20px; max-width: 650px;">
+                <h3 style="margin-top: 0; color: #555;"><i class="fas fa-barrier" style="color: #1976d2;"></i> Zone B Barrier — Manual Control</h3>
+                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 14px; color: #555;">Gate Status:</span>
+                        <span id="gateStatusBadge" style="padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; background: #e0e0e0; color: #555;">Unknown</span>
+                        <span id="gateOverrideBadge" style="display:none; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #fff3e0; color: #e65100;">Manual</span>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-left: auto;">
+                        <button id="btnOpenGate" onclick="sendGateCommand('manual_open')"
+                            style="padding: 9px 22px; background: #2e7d32; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.2s;">
+                            <i class="fas fa-door-open"></i> Open Gate
+                        </button>
+                        <button id="btnCloseGate" onclick="sendGateCommand('manual_close')"
+                            style="padding: 9px 22px; background: #c62828; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.2s;">
+                            <i class="fas fa-door-closed"></i> Close Gate
+                        </button>
+                    </div>
+                </div>
+                <p style="margin: 12px 0 0; font-size: 12px; color: #888;">
+                    <i class="fas fa-info-circle"></i> Manual open holds the gate open indefinitely — it will not auto-close. Use <b>Close Gate</b> to return to automatic mode.
+                </p>
+            </div>
             <div class="chart-section centered-chart">
                 <h2 style="margin-top: 0; color: #333;">Daily Parking Earnings</h2>
                 <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -133,8 +157,17 @@
         };
 
         client.onMessageArrived = function (message) {
-            console.log("RAW MQTT EVENT:", message.payloadString);
-            
+            console.log("RAW MQTT EVENT:", message.destinationName, message.payloadString);
+
+            // Handle barrier status messages on a separate topic
+            if (message.destinationName === "parking/Zone_A/barrier/status") {
+                try {
+                    const d = JSON.parse(message.payloadString);
+                    updateGateStatusUI(d.barrier, d.reason);
+                } catch(e) {}
+                return;
+            }
+
             try {
                 const data = JSON.parse(message.payloadString);
                 console.log("PARSED:", data);
@@ -198,6 +231,49 @@
             }
         };
 
+        // ── Gate manual control ────────────────────────────────────────────────────
+        function sendGateCommand(cmd) {
+            if (!client.isConnected()) {
+                alert("MQTT not connected. Please wait.");
+                return;
+            }
+            const msg = new Paho.MQTT.Message(cmd);
+            msg.destinationName = "parking/Zone_B/barrier/command";
+            msg.qos = 1;
+            client.send(msg);
+            console.log("[GATE CMD]", cmd);
+            // Optimistic UI update while we wait for the status echo
+            if (cmd === "manual_open") {
+                updateGateStatusUI("open", "manual_override");
+            } else {
+                updateGateStatusUI("closing...", "auto");
+            }
+        }
+
+        function updateGateStatusUI(barrier, reason) {
+            const badge = document.getElementById("gateStatusBadge");
+            const overrideBadge = document.getElementById("gateOverrideBadge");
+            const btnOpen  = document.getElementById("btnOpenGate");
+            const btnClose = document.getElementById("btnCloseGate");
+
+            const isManual = reason === "manual_override";
+            const isOpen   = barrier === "open" || barrier === "closing_soon";
+            const isClosed = barrier === "closed";
+
+            badge.textContent = barrier.replace("_", " ").toUpperCase();
+            badge.style.background = isClosed ? "#ffebee" : isOpen ? "#e8f5e9" : "#fff3e0";
+            badge.style.color      = isClosed ? "#c62828" : isOpen ? "#2e7d32" : "#e65100";
+
+            overrideBadge.style.display = isManual ? "inline-block" : "none";
+
+            // Disable the relevant button to avoid double-clicks
+            btnOpen.disabled  = isOpen  && isManual;
+            btnClose.disabled = isClosed;
+            btnOpen.style.opacity  = (isOpen  && isManual) ? "0.5" : "1";
+            btnClose.style.opacity = isClosed ? "0.5" : "1";
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+
         function connectMQTT() {
             document.getElementById("liveStatus").textContent = "Connecting MQTT...";
             document.getElementById("liveStatus").style.color = "#ff9800";
@@ -211,6 +287,7 @@
                     document.getElementById("liveStatus").textContent = "Connected";
                     document.getElementById("liveStatus").style.color = "#4caf50";
                     client.subscribe(MQTT_TOPIC);
+                    client.subscribe("parking/Zone_A/barrier/status");
                 },
                 onFailure: function (error) {
                     console.log("Connection failed", error);
@@ -310,17 +387,13 @@
 
 
 
-    <!--JS Graph-->
     <script>
-        // Global variables to store our chart instance and raw data
         let earningsChartInstance = null;
             let allDates = [];
             let allEarnings = [];
 
-            // Master function to fetch data ONCE
         async function fetchDashboardData() {
-            // Since you want the whole DB to access Users, Cards, and History, 
-            // remove the /Parking_History path and fetch the root.
+
             const url = "https://spsystem-44375-default-rtdb.asia-southeast1.firebasedatabase.app/.json";
             
             try {
@@ -329,10 +402,8 @@
                 
                 if (!data) return;
 
-                // 1. Process Data for the Chart
                 processChartData(data.Parking_History);
 
-                // 2. Process Data for the Leaderboard
                 processLeaderboardData(data);
 
             } catch (error) {
@@ -356,7 +427,7 @@
 
         allDates = Object.keys(dailyEarnings).sort();
         allEarnings = allDates.map(date => dailyEarnings[date]);
-        renderChart(allDates, allEarnings); // Your existing render function
+        renderChart(allDates, allEarnings); 
         }   
 
         function processLeaderboardData(data) {
@@ -364,9 +435,8 @@
             const cards = data.Card || {};
             const users = data.User || {};
 
-            let userTotals = {}; // Will hold { "User_ID": TotalAmount }
+            let userTotals = {}; 
 
-            // Step 1: Calculate total spent per User_ID
             for (const key in history) {
                 const session = history[key];
                 const fee = Number(session.Fee_Paid) || 0;
@@ -381,7 +451,6 @@
                 }
             }
 
-            // Step 2: Match User_ID to their Name and convert to an array
             let leaderboard = [];
             for (const userId in userTotals) {
                 const name = users[userId] ? users[userId].Name : "Unknown User";
@@ -391,25 +460,21 @@
                 });
             }
 
-            // Step 3: Sort the array from highest spender to lowest
             leaderboard.sort((a, b) => b.total - a.total);
 
-            // Step 4: Update the HTML DOM
             const listElement = document.getElementById('topSpendersList');
-            listElement.innerHTML = ''; // Clear the "Loading..." text
+            listElement.innerHTML = '';
 
             if (leaderboard.length === 0) {
                 listElement.innerHTML = '<li>No spending data available.</li>';
                 return;
             }
 
-            // Generate HTML for the Top 5 users
             const top5 = leaderboard.slice(0, 5); 
             top5.forEach((user, index) => {
                 const listItem = document.createElement('li');
                 listItem.className = 'leaderboard-item';
                 
-                // Add medals for 1st, 2nd, 3rd place
                 let rankStr = `${index + 1}.`;
                 if (index === 0) rankStr = '🥇';
                 if (index === 1) rankStr = '🥈';
