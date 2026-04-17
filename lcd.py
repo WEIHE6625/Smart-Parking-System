@@ -2,8 +2,8 @@ import time
 import threading
 import queue
 import json
-from unittest import result
 import paho.mqtt.client as mqtt
+from paho.mqtt.enums import CallbackAPIVersion
 
 class LCD:
     def __init__(self):
@@ -14,7 +14,7 @@ class LCD:
         self._last_line2 = None
         self._last_update_time = 0
         self._min_update_gap = 1.5
-        self.mqtt_client = mqtt.Client()
+        self.mqtt_client = mqtt.Client(CallbackAPIVersion.VERSION2)
         self._worker = threading.Thread(target=self._worker_loop, daemon=True)
         self._worker.start()
         self._is_showing_temp = False
@@ -54,10 +54,6 @@ class LCD:
             payload = json.dumps({"line1": line1, "line2": line2})
             self.mqtt_client.publish("parking/lcd/display", payload)
 
-            if result.rc == 0:
-                print(f"✅ SUCCESS: Message sent to HiveMQ: {line1}")
-            else:
-                print(f"❌ ERROR: MQTT failed to publish. Code: {result.rc}")
             self._last_line1 = line1
             self._last_line2 = line2
             self._last_update_time = time.time()

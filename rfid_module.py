@@ -8,13 +8,6 @@ from parking_logic import *
 
 rfid_bp = Blueprint('rfid', __name__)
 
-lcd_display.connect_cloud_mqtt(
-    broker="dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud",
-    port=8883,
-    user="zceping",
-    pw="Tzp014588!"
-)
-
 def bg_entry_update(scanned_uid):
     try:
         card_ref = db.reference(f"Card/{scanned_uid}")
