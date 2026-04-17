@@ -69,7 +69,8 @@ class LCD:
             time.sleep(self._min_update_gap - elapsed)
 
         print("State 2")
-        payload = json.dumps({"line1": line1, "line2": line2})  
+        payload = json.dumps({"line1": line1, "line2": line2}) 
+        print(f"Publishing to MQTT: {payload}", flush=True) 
         self.mqtt_client.publish("parking/lcd/display", payload)
         print("State 3")
 
