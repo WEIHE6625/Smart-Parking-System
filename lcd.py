@@ -53,8 +53,7 @@ class LCD:
         line1 = self._safe_text(line1)
         line2 = self._safe_text(line2)
 
-        print(line1)
-        print(line2)
+        print(f"Line 1: {line1} | Line 2: {line2}")
         # Check timing and dedup OUTSIDE the lock
         now = time.time()
         with self._lock:
@@ -62,16 +61,15 @@ class LCD:
                 return
             elapsed = now - self._last_update_time
         
-        print("hello")
+        print("State 1")
         # Sleep OUTSIDE the lock so MQTT thread isn't blocked
         if elapsed < self._min_update_gap:
             time.sleep(self._min_update_gap - elapsed)
 
-        print("hello11111")
-        payload = json.dumps({"line1": line1, "line2": line2})
+        print("State 2")
+        payload = json.dumps({"line1": line1, "line2": line2})  
         self.mqtt_client.publish("parking/lcd/display", payload)
-
-        print("world")
+        print("State 3")
         with self._lock:
             self._last_line1 = line1
             self._last_line2 = line2
@@ -123,7 +121,7 @@ class LCD:
         print(f"DEBUG [show_default]: Called on instance pid={os.getpid()}", flush=True)
         if self._queue.empty():
             self._queue.put({"type": "default"})
-            self._log_queue_state()
+            # self._log_queue_state()
 
     def show_success(self, balance, is_entry, user_name, duration=2):
         self._ensure_worker_alive()
@@ -137,17 +135,12 @@ class LCD:
 
         line2 = f"RM{float(balance):.2f}"
         
-        try:
-            self._queue.put_nowait({
+        self._queue.put_nowait({
                 "type": "temp",
                 "line1": greeting,
                 "line2": line2,
                 "duration": duration
             })
-            self._log_queue_state()
-            return 1
-        except queue.Full:
-            return 0
 
     def show_denied(self, message, duration=2):
         self._ensure_worker_alive()
@@ -157,16 +150,11 @@ class LCD:
             
         short_msg = message.replace("DENIED_", "").replace("_", " ").title()
         
-        try:
-            self._queue.put_nowait({
+        self._queue.put_nowait({
                 "type": "temp",
                 "line1": "Access Denied!",
                 "line2": short_msg,
                 "duration": duration
             })
-            self._log_queue_state()
-            return 1
-        except queue.Full:
-            return 0
 
 lcd_display = LCD()
