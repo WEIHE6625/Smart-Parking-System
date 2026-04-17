@@ -91,7 +91,7 @@ class LCD:
                 self._write_now(job["line1"], job["line2"])
                 time.sleep(job["duration"])
                 self._is_showing_temp = False # Mark as free
-                self._show_default_now()
+                # self._show_default_now()
 
             elif job["type"] == "default":
                 print("DEBUG: Attempting to publish DEFAULT", flush=True)
