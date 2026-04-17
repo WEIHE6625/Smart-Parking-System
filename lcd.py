@@ -68,8 +68,8 @@ class LCD:
         return str(text)[:16].ljust(16)
 
     def _write_now(self, line1, line2=""):
-        self._ensure_connected()
         print(f"Is connected: {self._is_connected}")
+        self._ensure_connected()
 
         line1 = self._safe_text(line1)
         line2 = self._safe_text(line2)
