@@ -54,14 +54,14 @@ class LCD:
     #     self.mqtt_client.connect(broker, port)
     #     self.mqtt_client.loop_start()
         
-    def set_available_provider(self, total_available):
-        self.total_available = total_available
+    def set_available_provider(self, func):
+        self.total_available = func
 
     def _get_available_slot(self):
         if self.total_available is None:
             return 0
         try:
-            return self.total_available
+            return self.total_available()
         except Exception:
             return 0
 
