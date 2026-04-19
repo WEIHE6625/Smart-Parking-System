@@ -22,7 +22,7 @@ def rfid_validate_entry(card_data, total_available) -> tuple[bool, str]:
     balance = card_data.get('Balance', 0.0)
     if balance < 20.0:
         print(f"Result: DENIED - Insufficient Funds (RM {balance})")
-        return False, "DENIED_FUNDS"
+        return False, "DENIED_ISUFF_FUNDS"
     
     # RULE 5: Is the card expired?
     expiry_str = card_data.get('Expiry_Date')
@@ -69,6 +69,14 @@ def add_new_parking_history(scanned_uid, entry_time, exit_time, calculated_fee):
     }
 
     db.reference(f'Parking_History/{new_session_id}').set(new_record)
+
+def get_user_name(card_data):
+    user_id = card_data.get('User_ID') if card_data else None
+    if user_id:
+        user_data = db.reference(f'User/{user_id}').get()
+        if user_data:
+            return user_data.get('Name', "")
+    return ""
 
 def calculate_parking_fee(entry_time, exit_time, first_hour_fee=2, fee_per_hour=1, max_fee=20):
     time_format = "%Y-%m-%d:%H:%M:%S"
