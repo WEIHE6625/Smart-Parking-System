@@ -199,7 +199,6 @@
 
             // Handle barrier status messages on a separate topic
             if (message.destinationName === "parking/financial_update") {
-                console.log("New transaction detected! Refreshing charts and leaderboard in background...");
                 fetchDashboardData(); 
                 return;
             }
