@@ -15,6 +15,13 @@ def register():
         password = request.form.get('password')
         card_id = request.form.get('card_id')
 
+        # Check if email is already registered
+        try:
+            user_by_email = auth.get_user_by_email(email)
+            return render_template('register.html', error="Email already registered. Please login.")
+        except firebase_admin.exceptions.FirebaseError:
+            pass  # Email not found, proceed with registration
+
         card_ref = db.reference(f'Card/{card_id}')
         card_data = card_ref.get()
 
@@ -31,7 +38,7 @@ def register():
             db.reference(f'User/{firebase_uid}').set({"Name": name, "Email": email, "Role": "user"})
             card_ref.update({"User_ID": firebase_uid})
 
-            return redirect(url_for('auth.login'))
+            return redirect(url_for('auth.login', success="Account created successfully! Please login."))
 
         except firebase_admin.exceptions.FirebaseError as e:
             return render_template('register.html', error=str(e))
