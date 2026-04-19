@@ -48,6 +48,9 @@ def register():
 # The Login Route
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    success_msg = request.args.get('success')
+
+
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -94,7 +97,7 @@ def login():
         else:
             return render_template('login.html', error="Invalid email or password.")
 
-    return render_template('login.html')
+    return render_template('login.html', success=success_msg)
 
 @auth_bp.route('/logout')
 def logout():
