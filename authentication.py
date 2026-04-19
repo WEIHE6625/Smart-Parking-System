@@ -28,7 +28,7 @@ def register():
             user_record = auth.create_user(email=email, password=password, display_name=name)
             firebase_uid = user_record.uid 
 
-            db.reference(f'User/{firebase_uid}').set({"Name": name, "Email": email})
+            db.reference(f'User/{firebase_uid}').set({"Name": name, "Email": email, "Role": "user"})
             card_ref.update({"User_ID": firebase_uid})
 
             return redirect(url_for('auth.login'))
@@ -54,6 +54,19 @@ def login():
             user_data = response.json()
             firebase_uid = user_data['localId']
 
+            user_ref = db.reference(f'User/{firebase_uid}').get()
+
+            if not user_ref:
+                return render_template('login.html', error="User profile not found.")
+
+            user_role = user_ref.get('Role', '').lower()
+            session['user_id'] = firebase_uid
+            session['role'] = user_role
+            
+            if user_role == 'admin':
+                session['card_id'] = None
+                return redirect(url_for('dashboard')) 
+            
             cards_ref = db.reference('Card').get()
             user_card_id = None
             

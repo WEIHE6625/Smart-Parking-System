@@ -1,10 +1,11 @@
 from flask import Flask, request, render_template, redirect, url_for, session
+import threading
 from firebase_admin import db
-
-from rfid_lcd import RFID_LCD
+from lcd import lcd_display
 
 from authentication import auth_bp
 from rfid_module import rfid_bp
+from parking_slot_module import *
 from firebase_config import init_firebase
 from parking_logic import *
 
@@ -13,18 +14,23 @@ app = Flask(__name__)
 app.secret_key = "secretkey"
 init_firebase()
 
+lcd_display.setup_mqtt_credentials(
+    "dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud", 
+    8883, 
+    "zceping", 
+    "Tzp014588!"
+    )
+
+threading.Thread(target=start_mqtt_listener, daemon=True).start()
+
 app.register_blueprint(auth_bp)
 app.register_blueprint(rfid_bp)
+app.register_blueprint(slot_bp)
+
 
 @app.route('/')
 def home():
-    lcd_display = RFID_LCD()
-
-    zone_ref = db.reference('Parking_Zone')
-    zone_data = zone_ref.get()
-    total_available = zone_data.get('Total_Available_Parking', 0)
-
-    lcd_display.show_default(total_available)
+    lcd_display.show_default()
     return redirect(url_for('auth.login'))
 
 @app.route('/dashboard')
@@ -73,4 +79,4 @@ def topup():
     return render_template('topup.html', balance=current_balance, card_id=user_card_id, success=success_msg)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000)

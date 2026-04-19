@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Parking Dashboard</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="C:\Users\Taruc\Documents\GitHub\Smart-Parking-System\static\styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+</head>
+<body>
+    <header class="dashboard-header">
+        <div class="header-brand">
+            <i class="fas fa-car-side header-icon"></i>
+            <h1 class="header-title">SmartPark Dashboard</h1>
+        </div>
+
+        <div class="header-status">
+            <i class="fas fa-wifi"></i> Status: 
+            <span id="liveStatus" class="status-text">Connecting...</span>
+        </div>
+    </header>
+    <div class = "dashboard-container">
+            <div class = "live-section">
+                <div class="status-row">
+                        
+                    <div class="card">
+                        <h3 style="margin-top: 0; color: #555;"><i class="fas fa-parking" style="color: #1976d2;"></i> Total Available</h3>
+                        <div style="display: flex; align-items: baseline; justify-content: center; gap: 5px;">
+                            <h2 id="totalAvailable" style="margin: 0; font-size: 48px;">0</h2>
+                            <span style="color: #888; font-size: 18px;">/ 4</span>
+                        </div>
+                        <div style="width: 100%; background: #e0e0e0; height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
+                            <div id="availabilityBar" style="width: 0%; height: 100%; background: #2e7d32; transition: all 0.5s ease;"></div>
+                        </div>
+                    </div>
+
+                    <div class="zone-box" id="zoneABox">
+                        <div class="zone-header">
+                            <h2 style="margin: 0; font-size: 20px;">Zone A</h2>
+                            <div class="slot-badge">
+                                <i class="fas fa-parking"></i>
+                                <span id="zoneAAvailable">0</span> Available
+                            </div>
+                        </div>
+                        <div class="slot-grid">
+                            
+                            <div id="Slot_A1" class="slot empty">
+                                <i class="fas fa-check-circle fa-2x" style="margin-bottom: 8px; opacity: 0.5;"></i>
+                                <div style="font-weight: 700; font-size: 16px;">Slot A1</div>
+                                <div style="font-size: 13px; margin-top: 4px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">AVAILABLE</div>
+                            </div>
+                            
+                            <div id="Slot_A2" class="slot empty">
+                                <i class="fas fa-check-circle fa-2x" style="margin-bottom: 8px; opacity: 0.5;"></i>
+                                <div style="font-weight: 700; font-size: 16px;">Slot A2</div>
+                                <div style="font-size: 13px; margin-top: 4px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">AVAILABLE</div>
+                            </div>
+                            
+                        </div>
+                    </div>
+
+                    <div class="zone-box" id="zoneBBox">
+                        <div class="zone-header">
+                            <h2 style="margin: 0; font-size: 20px;">Zone B</h2>
+                            <div class="slot-badge">
+                                <i class="fas fa-parking"></i>
+                                <span id="zoneBAvailable">0</span> Available
+                            </div>
+                        </div>
+                        <div class="slot-grid">
+                            
+                            <div id="Slot_B1" class="slot empty">
+                                <i class="fas fa-check-circle fa-2x" style="margin-bottom: 8px; opacity: 0.5;"></i>
+                                <div style="font-weight: 700; font-size: 16px;">Slot B1</div>
+                                <div style="font-size: 13px; margin-top: 4px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">AVAILABLE</div>
+                            </div>
+                            
+                            <div id="Slot_B2" class="slot empty">
+                                <i class="fas fa-check-circle fa-2x" style="margin-bottom: 8px; opacity: 0.5;"></i>
+                                <div style="font-weight: 700; font-size: 16px;">Slot B2</div>
+                                <div style="font-size: 13px; margin-top: 4px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">AVAILABLE</div>
+                            </div>
+                            
+                        </div>
+                    </div>
+
+
+                </div>
+
+                <div id="illegalStatusContainer">
+                    <h3 style="color: #c62828; margin-top: 0;">🚨 Illegal Parking Status 🚨</h3>
+                    
+                    <div id="illegalZoneA" class="illegal-item illegal-clear">
+                        Slot A1 & A2 - CLEAR
+                        <span class="small">Distance: 0 cm</span>
+                    </div>
+                    
+                    <div id="illegalZoneB" class="illegal-item illegal-clear">
+                        Slot B1 & B2 - CLEAR
+                        <span class="small">Distance: 0 cm</span>
+                    </div>
+                </div>
+            </div>
+
+
+            <div id="gateControlPanel" style="background: #fff; border-radius: 12px; padding: 20px 25px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); margin-top: 20px;">
+                <h3 style="margin-top: 0; color: #555;"><i class="fas fa-barrier" style="color: #1976d2;"></i> Zone B Barrier — Manual Control</h3>
+                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 14px; color: #555;">Gate Status:</span>
+                        <span id="gateStatusBadge" style="padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; background: #e0e0e0; color: #555;">Unknown</span>
+                        <span id="gateOverrideBadge" style="display:none; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #fff3e0; color: #e65100;">Manual</span>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-left: auto;">
+                        <button id="btnOpenGate" onclick="sendGateCommand('manual_open')"
+                            style="padding: 9px 22px; background: #2e7d32; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.2s;">
+                            <i class="fas fa-door-open"></i> Open Gate
+                        </button>
+                        <button id="btnCloseGate" onclick="sendGateCommand('manual_close')"
+                            style="padding: 9px 22px; background: #c62828; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.2s;">
+                            <i class="fas fa-door-closed"></i> Close Gate
+                        </button>
+                    </div>
+                </div>
+                <p style="margin: 12px 0 0; font-size: 12px; color: #888;">
+                    <i class="fas fa-info-circle"></i> Manual open holds the gate open indefinitely — it will not auto-close. Use <b>Close Gate</b> to return to automatic mode.
+                </p>
+            </div>
+            <div class="chart-section centered-chart">
+                <h2 style="margin-top: 0; color: #333;">Daily Parking Earnings</h2>
+                    <div style="margin-bottom: 25px; display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                        
+                        <div style="display: flex; gap: 10px; flex-wrap: nowrap; justify-content: center;">
+                            <div>
+                                <label for="startDate" style="font-size: 14px; font-weight: bold; color: #555;">From:</label>
+                                <input type="date" id="startDate" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-family: inherit;">
+                            </div>
+                            <div>
+                                <label for="endDate" style="font-size: 14px; font-weight: bold; color: #555;">To:</label>
+                                <input type="date" id="endDate" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-family: inherit;">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 12px; justify-content: center;">
+                            <button onclick="applyDateFilter()" style="padding: 10px 24px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; transition: background 0.2s;">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                            <button onclick="resetDateFilter()" style="padding: 10px 24px; background: #9e9e9e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; transition: background 0.2s;">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                <div class="canvas-wrapper">
+                    <canvas id="earningsChart"></canvas>
+                </div>
+            </div>
+            <div class="leaderboard-section">
+                <h2 style="margin-top: 0;"><i class="fas fa-trophy" style="color: #fbc02d;"></i> Top Spenders</h2>
+                <ul id="topSpendersList" class="leaderboard-list">
+                    <li>Loading leaderboard...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // HiveMQ Cloud WebSocket connection details
+        const MQTT_BROKER = "dd35fd08fd3e4f6bbd826d8384d43855.s1.eu.hivemq.cloud";
+        const MQTT_PORT = 8884; // 8884 is the HiveMQ Cloud port for Secure WebSockets
+        const MQTT_USER = "zceping";
+        const MQTT_PW = "Tzp014588!";
+        const MQTT_TOPIC = "parking/full_state";
+        
+        // Generate a random client ID
+        const clientId = "web_dashboard_" + Math.random().toString(16).substr(2, 8);
+        const client = new Paho.MQTT.Client(MQTT_BROKER, MQTT_PORT, "/mqtt", clientId);
+
+        let wasIllegalA = false;
+        let wasIllegalB = false;
+
+        client.onConnectionLost = function (responseObject) {
+            if (responseObject.errorCode !== 0) {
+                console.log("Connection Lost: " + responseObject.errorMessage);
+                document.getElementById("liveStatus").textContent = "Reconnecting...";
+                document.getElementById("liveStatus").style.color = "#f44336";
+                // Attempt to reconnect after 3 seconds
+                setTimeout(connectMQTT, 3000);
+            }
+        };
+
+        client.onMessageArrived = function (message) {
+            console.log("RAW MQTT EVENT:", message.destinationName, message.payloadString);
+
+            // Handle barrier status messages on a separate topic
+            if (message.destinationName === "parking/Zone_A/barrier/status") {
+                try {
+                    const d = JSON.parse(message.payloadString);
+                    updateGateStatusUI(d.barrier, d.reason);
+                    // Show banner if the gate close was blocked by a car underneath
+                    if (d.reason === "close_blocked_car_detected") {
+                        showCarUnderGateBanner();
+                    }
+                } catch(e) {}
+                return;
+            }
+
+            try {
+                const data = JSON.parse(message.payloadString);
+                console.log("PARSED:", data);
+                
+                const totalAvailableEl = document.getElementById("totalAvailable");
+                const available = parseInt(data.TOTAL_AVAILABLE);
+                const maxSlots = 4;
+                const percentage = (available / maxSlots) * 100;
+
+                if (totalAvailableEl.textContent != data.TOTAL_AVAILABLE) {
+                    totalAvailableEl.textContent = data.TOTAL_AVAILABLE;
+                    
+                    totalAvailableEl.classList.remove("pulse");
+                    void totalAvailableEl.offsetWidth; 
+                    totalAvailableEl.classList.add("pulse");
+                }
+
+
+                totalAvailableEl.textContent = available;
+
+                totalAvailableEl.className = "";
+                if (available > 2) {
+                    totalAvailableEl.classList.add("status-high");
+                } else if (available > 0) {
+                    totalAvailableEl.classList.add("status-med");
+                } else {
+                    totalAvailableEl.classList.add("status-full");
+                }
+
+                const bar = document.getElementById("availabilityBar");
+                if (bar) {
+                    bar.style.width = percentage + "%";
+                    if (available === 0) bar.style.background = "#c62828";
+                    else if (available <= 2) bar.style.background = "#f57c00";
+                    else bar.style.background = "#2e7d32";
+                }
+
+                document.getElementById("zoneAAvailable").textContent = data.ZONE_AVAILABLE.Zone_A;
+                document.getElementById("zoneBAvailable").textContent = data.ZONE_AVAILABLE.Zone_B;
+
+                updateSlot("Slot_A1", data.SLOTS.Zone_A.Slot_A1);
+                updateSlot("Slot_A2", data.SLOTS.Zone_A.Slot_A2);
+                updateSlot("Slot_B1", data.SLOTS.Zone_B.Slot_B1);
+                updateSlot("Slot_B2", data.SLOTS.Zone_B.Slot_B2);
+
+                // Store latest state so the Zone B warning modal can check occupancy
+                lastParkingState = data;
+
+                updateIllegalZone("illegalZoneA", "Slot A1 & A2", data.ILLEGAL_PARKING.Zone_A);
+                updateIllegalZone("illegalZoneB", "Slot B1 & B2", data.ILLEGAL_PARKING.Zone_B);
+                handleAlert(data);
+
+                const isIllegalA = data.ILLEGAL_PARKING.Zone_A.detected;
+                const isIllegalB = data.ILLEGAL_PARKING.Zone_B.detected;
+
+                document.getElementById("zoneABox").classList.toggle("zone-illegal", isIllegalA);
+                document.getElementById("zoneBBox").classList.toggle("zone-illegal", isIllegalB);
+                
+                
+            } catch (e) {
+                console.error("Error parsing MQTT payload or updating UI:", e);
+            }
+        };
+
+        // ── Gate manual control ────────────────────────────────────────────────────
+        function sendGateCommand(cmd) {
+            if (!client.isConnected()) {
+                alert("MQTT not connected. Please wait.");
+                return;
+            }
+            const msg = new Paho.MQTT.Message(cmd);
+            msg.destinationName = "parking/Zone_B/barrier/command";
+            msg.qos = 1;
+            client.send(msg);
+            console.log("[GATE CMD]", cmd);
+            // Optimistic UI update while we wait for the status echo
+            if (cmd === "manual_open") {
+                updateGateStatusUI("open", "manual_override");
+            } else {
+                updateGateStatusUI("closing...", "auto");
+            }
+        }
+
+        function updateGateStatusUI(barrier, reason) {
+            const badge = document.getElementById("gateStatusBadge");
+            const overrideBadge = document.getElementById("gateOverrideBadge");
+            const btnOpen  = document.getElementById("btnOpenGate");
+            const btnClose = document.getElementById("btnCloseGate");
+
+            const isManual = reason === "manual_override";
+            const isOpen   = barrier === "open" || barrier === "closing_soon";
+            const isClosed = barrier === "closed";
+
+            badge.textContent = barrier.replace("_", " ").toUpperCase();
+            badge.style.background = isClosed ? "#ffebee" : isOpen ? "#e8f5e9" : "#fff3e0";
+            badge.style.color      = isClosed ? "#c62828" : isOpen ? "#2e7d32" : "#e65100";
+
+            overrideBadge.style.display = isManual ? "inline-block" : "none";
+
+            // Disable the relevant button to avoid double-clicks
+            btnOpen.disabled  = isOpen  && isManual;
+            btnClose.disabled = isClosed;
+            btnOpen.style.opacity  = (isOpen  && isManual) ? "0.5" : "1";
+            btnClose.style.opacity = isClosed ? "0.5" : "1";
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+
+        function connectMQTT() {
+            document.getElementById("liveStatus").textContent = "Connecting MQTT...";
+            document.getElementById("liveStatus").style.color = "#ff9800";
+
+            const options = {
+                useSSL: true,
+                userName: MQTT_USER,
+                password: MQTT_PW,
+                onSuccess: function () {
+                    console.log("Connected to MQTT Broker via WebSockets");
+                    document.getElementById("liveStatus").textContent = "Connected";
+                    document.getElementById("liveStatus").style.color = "#4caf50";
+                    client.subscribe(MQTT_TOPIC);
+                    client.subscribe("parking/Zone_A/barrier/status");
+                },
+                onFailure: function (error) {
+                    console.log("Connection failed", error);
+                    document.getElementById("liveStatus").textContent = "Failed. Retrying...";
+                    document.getElementById("liveStatus").style.color = "#f44336";
+                    setTimeout(connectMQTT, 3000);
+                }
+            };
+
+            client.connect(options);
+        }
+
+        // Initialize Connection
+        connectMQTT();
+
+        function updateSlot(slotId, slotData) {
+            const el = document.getElementById(slotId);
+            
+            const icon = slotData.status === 'occupied' 
+                ? '<i class="fas fa-car fa-2x" style="margin-bottom: 8px;"></i>' 
+                : '<i class="fas fa-check-circle fa-2x" style="margin-bottom: 8px; opacity: 0.5;"></i>';
+
+            const statusText = slotData.status === 'occupied' ? 'Occupied' : 'Available';
+            
+            const cleanSlotId = slotId.replace('_', ' ');
+
+            el.className = "slot " + slotData.status;
+            
+            el.innerHTML = `
+                ${icon}
+                <div style="font-weight: 700; font-size: 16px;">${cleanSlotId}</div>
+                <div style="font-size: 13px; margin-top: 4px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">
+                    ${statusText}
+                </div>
+            `;
+        }
+
+        function updateIllegalZone(elementId, zoneLabel, illegalData) {
+            const el = document.getElementById(elementId);
+            const detected = illegalData && illegalData.detected;
+            const distance = illegalData ? illegalData.distance : 0;
+
+            el.className = "illegal-item " + (detected ? "illegal-detected" : "illegal-clear");
+            el.innerHTML = `
+                ${zoneLabel} - ${detected ? "DETECTED" : "CLEAR"}
+                <span class="small">Distance: ${distance} cm</span>
+            `;
+        }
+
+        function handleAlert(data) {
+            const container = document.getElementById("illegalStatusContainer");
+            const elA = document.getElementById("illegalZoneA");
+            const elB = document.getElementById("illegalZoneB");
+            
+            const isA = data.ILLEGAL_PARKING?.Zone_A?.detected || false;
+            const isB = data.ILLEGAL_PARKING?.Zone_B?.detected || false;
+
+            if (isA) {
+                elA.style.display = "flex";
+                const distA = document.querySelector("#illegalZoneA .small");
+                if(distA) distA.textContent = `Distance: ${data.ILLEGAL_PARKING.Zone_A.distance} cm`;
+            } else {
+                elA.style.display = "none";
+            }
+
+            if (isB) {
+                elB.style.display = "flex";
+                const distB = document.querySelector("#illegalZoneB .small");
+                if(distB) distB.textContent = `Distance: ${data.ILLEGAL_PARKING.Zone_B.distance} cm`;
+            } else {
+                elB.style.display = "none";
+            }
+
+            if (isA || isB) {
+                container.style.display = "block";
+            } else {
+                container.style.display = "none";
+            }
+        }
+
+    </script>   
+
+
+
+    <script>
+        let earningsChartInstance = null;
+        let rawHistoryData = {}; // Store the raw data globally so we can re-filter it anytime
+
+        async function fetchDashboardData() {
+            const url = "https://spsystem-44375-default-rtdb.asia-southeast1.firebasedatabase.app/.json";
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (!data) return;
+
+                // Store the raw history data
+                rawHistoryData = data.Parking_History || {};
+
+                // Process chart for all-time daily view by default
+                processAndRenderChart(null, null);
+
+                processLeaderboardData(data);
+
+            } catch (error) {
+                console.error("Error loading dashboard data:", error);
+            }
+        }
+
+        function processAndRenderChart(startDateStr, endDateStr) {
+            let groupedData = {};
+            let isHourly = false;
+
+            // Check if the user selected the exact same date for "From" and "To"
+            if (startDateStr && endDateStr && startDateStr === endDateStr) {
+                isHourly = true;
+                // Pre-fill the 24 hours (00:00 to 23:00) so the graph doesn't have gaps
+                for (let i = 0; i < 24; i++) {
+                    let hourStr = i.toString().padStart(2, '0') + ":00";
+                    groupedData[hourStr] = 0;
+                }
+            }
+
+            // Loop through the raw data
+            for (const key in rawHistoryData) {
+                const session = rawHistoryData[key];
+                
+                if (session.Exit_Time && session.Fee_Paid !== undefined) {
+                    const fullDateStr = session.Exit_Time; // Expected format: "YYYY-MM-DD HH:MM:SS"
+                    const datePart = fullDateStr.substring(0, 10); 
+                    const hourPart = fullDateStr.substring(11, 13) + ":00"; 
+
+                    let isAfterStart = !startDateStr || datePart >= startDateStr;
+                    let isBeforeEnd = !endDateStr || datePart <= endDateStr;
+
+                    // If the record falls within our selected dates
+                    if (isAfterStart && isBeforeEnd) {
+                        if (isHourly) {
+                            // Group by Hour
+                            if (datePart === startDateStr) {
+                                groupedData[hourPart] += Number(session.Fee_Paid);
+                            }
+                        } else {
+                            // Group by Day
+                            if (!groupedData[datePart]) groupedData[datePart] = 0;
+                            groupedData[datePart] += Number(session.Fee_Paid);
+                        }
+                    }
+                }
+            }
+
+            // Extract sorted labels and data points
+            const labels = Object.keys(groupedData).sort();
+            const dataPoints = labels.map(label => groupedData[label]);
+
+            // Change the X-Axis title based on the view
+            const xAxisLabel = isHourly ? `Time (Hourly for ${startDateStr})` : 'Date';
+
+            renderChart(labels, dataPoints, xAxisLabel, isHourly);
+        }
+
+        function renderChart(labels, dataPoints, xAxisTitle, isHourly) {
+            const ctx = document.getElementById('earningsChart').getContext('2d');
+            
+            if (earningsChartInstance) {
+                earningsChartInstance.destroy();
+            }
+
+            earningsChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Fee Paid (RM)',
+                        data: dataPoints,
+                        borderColor: '#2ca02c',
+                        backgroundColor: 'rgba(44, 160, 44, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 5,
+                        hitRadius: 15,
+                        hoverRadius: 8,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Ensures it looks good on mobile
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            title: { display: true, text: 'RM' } 
+                        },
+                        x: { 
+                            title: { display: true, text: xAxisTitle },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                // If it's hourly, allow more labels to show. If daily, limit to 6 so mobile doesn't overlap.
+                                maxTicksLimit: isHourly ? 12 : 6 
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                boxWidth: 12,
+                                font: { size: 13 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function applyDateFilter() {
+            const startDateStr = document.getElementById('startDate').value;
+            const endDateStr = document.getElementById('endDate').value;
+
+            if (!startDateStr && !endDateStr) {
+                alert("Please select at least one date to filter.");
+                return;
+            }
+
+            // Call our new dynamic chart processor
+            processAndRenderChart(startDateStr, endDateStr);
+        }
+
+        function resetDateFilter() {
+            document.getElementById('startDate').value = "";
+            document.getElementById('endDate').value = "";
+            
+            // Pass null to show all-time daily data
+            processAndRenderChart(null, null);
+        }
+
+        function processLeaderboardData(data) {
+            const history = data.Parking_History || {};
+            const cards = data.Card || {};
+            const users = data.User || {};
+
+            let userTotals = {}; 
+
+            for (const key in history) {
+                const session = history[key];
+                const fee = Number(session.Fee_Paid) || 0;
+                const cardId = session.Card_ID;
+
+                if (fee > 0 && cards[cardId]) {
+                    const userId = cards[cardId].User_ID;
+                    if (userId) {
+                        if (!userTotals[userId]) userTotals[userId] = 0;
+                        userTotals[userId] += fee;
+                    }
+                }
+            }
+
+            let leaderboard = [];
+            for (const userId in userTotals) {
+                const name = users[userId] ? users[userId].Name : "Unknown User";
+                leaderboard.push({ 
+                    name: name, 
+                    total: userTotals[userId] 
+                });
+            }
+
+            leaderboard.sort((a, b) => b.total - a.total);
+
+            const listElement = document.getElementById('topSpendersList');
+            listElement.innerHTML = '';
+
+            if (leaderboard.length === 0) {
+                listElement.innerHTML = '<li>No spending data available.</li>';
+                return;
+            }
+
+            const top5 = leaderboard.slice(0, 5); 
+            top5.forEach((user, index) => {
+                const listItem = document.createElement('li');
+                listItem.className = 'leaderboard-item';
+                
+                let rankStr = `${index + 1}.`;
+                if (index === 0) rankStr = '🥇';
+                if (index === 1) rankStr = '🥈';
+                if (index === 2) rankStr = '🥉';
+
+                listItem.innerHTML = `
+                    <div>
+                        <span style="margin-right: 10px; color: #757575;">${rankStr}</span>
+                        <span class="user-name">${user.name}</span>
+                    </div>
+                    <div class="user-spent">RM ${user.total.toFixed(2)}</div>
+                `;
+                listElement.appendChild(listItem);
+            });
+        }
+
+        fetchDashboardData();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- ── Zone B occupied warning modal ───────────────────────────────────── -->
+    <div id="zoneBWarningModal" style="
+        display:none; position:fixed; inset:0;
+        background:rgba(0,0,0,0.5); z-index:1000;
+        align-items:center; justify-content:center;">
+        <div style="
+            background:#fff; border-radius:14px; padding:32px 28px;
+            max-width:420px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.2);
+            font-family:'Poppins',sans-serif; text-align:center;">
+            <div style="font-size:48px; margin-bottom:12px;">⚠️</div>
+            <h3 style="margin:0 0 10px; color:#c62828; font-size:20px;">Cars Still in Zone B</h3>
+            <p style="color:#555; font-size:14px; margin:0 0 24px; line-height:1.6;">
+                There are cars currently parked in Zone B.<br>
+                Closing the gate now may trap them inside.<br><br>
+                <strong>Are you sure you want to close the gate?</strong>
+            </p>
+            <div style="display:flex; gap:12px; justify-content:center;">
+                <button onclick="confirmCloseGate()" style="
+                    padding:10px 26px; background:#c62828; color:white;
+                    border:none; border-radius:8px; font-size:14px;
+                    font-weight:700; cursor:pointer; font-family:inherit;">
+                    Yes, Close Gate
+                </button>
+                <button onclick="cancelCloseGate()" style="
+                    padding:10px 26px; background:#e0e0e0; color:#333;
+                    border:none; border-radius:8px; font-size:14px;
+                    font-weight:700; cursor:pointer; font-family:inherit;">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- ──────────────────────────────────────────────────────────────────────── -->
+
+    <!-- ── Car under gate notification banner ──────────────────────────────── -->
+    <div id="carUnderGateBanner" style="
+        display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+        background:#e65100; color:white; border-radius:10px;
+        padding:14px 24px; z-index:999; font-family:'Poppins',sans-serif;
+        box-shadow:0 4px 18px rgba(0,0,0,0.25); font-size:14px; font-weight:600;
+        align-items:center; gap:10px; max-width:90vw;">
+        <span style="font-size:20px;">🚗</span>
+        <span>Car detected under the gate — close cancelled. Retrying in 3 seconds...</span>
+        <button onclick="dismissCarUnderGateBanner()" style="
+            background:rgba(255,255,255,0.25); border:none; color:white;
+            border-radius:6px; padding:4px 10px; cursor:pointer;
+            font-size:13px; font-weight:700; margin-left:8px;">✕</button>
+    </div>
+    <!-- ──────────────────────────────────────────────────────────────────────── -->
+
+    <script>
+        // ── Track last parking state so modal can check Zone B occupancy ─────────
+        let lastParkingState = null;
+
+        function isZoneBOccupied() {
+            if (!lastParkingState) return false;
+            const slots = lastParkingState.SLOTS?.Zone_B || {};
+            return Object.values(slots).some(s => s.status === "occupied");
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+
+        // ── Zone B warning modal logic ────────────────────────────────────────────
+        // Overrides the original sendGateCommand defined above.
+        // When closing and Zone B has cars → show warning first.
+        // When opening, or Zone B is empty → send command directly.
+        function sendGateCommand(cmd) {
+            if (!client.isConnected()) {
+                alert("MQTT not connected. Please wait.");
+                return;
+            }
+            if (cmd === "manual_close" && isZoneBOccupied()) {
+                document.getElementById("zoneBWarningModal").style.display = "flex";
+                return;
+            }
+            dispatchGateCommand(cmd);
+        }
+
+        function confirmCloseGate() {
+            document.getElementById("zoneBWarningModal").style.display = "none";
+            dispatchGateCommand("manual_close");
+        }
+
+        function cancelCloseGate() {
+            document.getElementById("zoneBWarningModal").style.display = "none";
+            // No command sent — gate stays open
+        }
+
+        function dispatchGateCommand(cmd) {
+            const msg = new Paho.MQTT.Message(cmd);
+            msg.destinationName = "parking/Zone_B/barrier/command";
+            msg.qos = 1;
+            client.send(msg);
+            console.log("[GATE CMD]", cmd);
+            if (cmd === "manual_open") {
+                updateGateStatusUI("open", "manual_override");
+            } else {
+                updateGateStatusUI("closing...", "auto");
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+
+        // ── Car under gate banner logic ───────────────────────────────────────────
+        let carUnderGateTimer = null;
+
+        function showCarUnderGateBanner() {
+            const banner = document.getElementById("carUnderGateBanner");
+            banner.style.display = "flex";
+            // Auto-dismiss after 5 seconds
+            clearTimeout(carUnderGateTimer);
+            carUnderGateTimer = setTimeout(() => {
+                banner.style.display = "none";
+            }, 5000);
+        }
+
+        function dismissCarUnderGateBanner() {
+            clearTimeout(carUnderGateTimer);
+            document.getElementById("carUnderGateBanner").style.display = "none";
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+    </script>
+</body>
+</html>

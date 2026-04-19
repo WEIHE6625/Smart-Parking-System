@@ -1,20 +1,35 @@
 #include <SPI.h>
 #include <MFRC522.h>
 #include <WiFi.h>        
+#include <WiFiClientSecure.h> 
 #include <HTTPClient.h> 
+#include <ESP32Servo.h>
 
-const char* wifi_ssid = "B100M";
+const char* wifi_ssid = "B100M-T3";
 const char* wifi_password = "12345678";
 
 // Flask Server IP
-const char* serverName = "http://192.168.200.104:5000/rfid_entry"; 
+const char* serverName = "https://smart-parking-system-ucb4.onrender.com/rfid_entry"; 
 
 #define SS_PIN 5
 #define RST_PIN 21
-#define GREEN_LED 27
-#define RED_LED 25  
-#define BUZZER 32
+#define GREEN_LED 17
+#define RED_LED 16 
+#define BUZZER 15
+#define ULTRASONIC_TRIG 32
+#define ULTRASONIC_ECHO 35
+#define SERVO_PIN 13
+
+
 MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
+Servo entry_gate;
+
+const int thresholdCM = 5;
+const int openAngle = 100;
+const int closeAngle = 10;
+const int motorMinPulse = 550;
+const int motorMaxPulse = 2400;
+
 
 void setup_wifi() {
   delay(10);
@@ -41,6 +56,21 @@ void setup() {
   digitalWrite(RED_LED, HIGH);
   digitalWrite(BUZZER, LOW);
 
+  // Initialize ultrasonic sensor
+  pinMode(ULTRASONIC_TRIG, OUTPUT);
+  pinMode(ULTRASONIC_ECHO, INPUT);
+
+  //Initialize servo motor
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+
+  entry_gate.setPeriodHertz(50);    // Standard 50hz servo frequency
+  entry_gate.attach(SERVO_PIN, motorMinPulse, motorMaxPulse);
+  entry_gate.write(closeAngle);
+  delay(1000); 
+
   // Connect to Wi-Fi
   setup_wifi();
 
@@ -48,8 +78,63 @@ void setup() {
 }
 
 
+// A custom function to move the gate smoothly and stop bouncing
+void smooth_move(int currentAngle, int targetAngle) {
+  
+  // If we are moving UP
+  if (currentAngle < targetAngle) {
+    for (int pos = currentAngle; pos <= targetAngle; pos += 1) {
+      entry_gate.write(pos);
+      delay(8);
+    }
+  } 
+  // If we are moving DOWN
+  else {
+    for (int pos = currentAngle; pos >= targetAngle; pos -= 1) {
+      entry_gate.write(pos);
+      delay(8);
+    }
+  }
+}
+
+
+bool car_is_blocking_gate() {
+  digitalWrite(ULTRASONIC_TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(ULTRASONIC_TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(ULTRASONIC_TRIG, LOW);
+
+  long duration = pulseIn(ULTRASONIC_ECHO, HIGH, 25000);
+  float distanceCM = duration * 0.0343 / 2;
+  Serial.println(distanceCM);
+  if(distanceCM > 0 && distanceCM < thresholdCM) {
+    return true; 
+  }
+  
+  return false;
+}
+
+void detect_car_blocking_gate() {
+  while(car_is_blocking_gate()) {
+    Serial.println("Car is currently blocking gate. Waiting for car to move before closing");
+    delay(1000);
+  }
+}
+
+void gate_action() {
+  smooth_move(closeAngle, openAngle);
+  delay(1000);
+  detect_car_blocking_gate();
+  delay(1000);
+  smooth_move(openAngle, closeAngle);
+  delay(1000); 
+}
+
 void approved() {
   Serial.println("Action: OPENING GATE");
+
+
   digitalWrite(RED_LED, LOW);
   digitalWrite(GREEN_LED, HIGH);
   
@@ -60,8 +145,9 @@ void approved() {
   digitalWrite(BUZZER, HIGH); 
   delay(150);
   digitalWrite(BUZZER, LOW);
+
+  gate_action();
   
-  delay(1050);
   digitalWrite(GREEN_LED, LOW);
   digitalWrite(RED_LED, HIGH);
 }
@@ -85,6 +171,7 @@ void denied() {
 
 void loop() {
   // Reset the loop if no new card present on the sensor/reader.
+  
   if (!rfid.PICC_IsNewCardPresent()){
     return;
   }
@@ -120,8 +207,11 @@ void loop() {
 
   // Send the HTTP POST request to Flask
   if(WiFi.status() == WL_CONNECTED){
+    WiFiClientSecure client;
+    client.setInsecure(); // Bypass SSL certificate verification
+
     HTTPClient http;
-    http.begin(serverName); 
+    http.begin(client, serverName); // Pass the secure client into the HTTP connection
     http.addHeader("Content-Type", "application/json");
     
     // Create a simple JSON payload

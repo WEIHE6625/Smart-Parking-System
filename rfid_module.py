@@ -3,20 +3,39 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from firebase_admin import db
 
-from rfid_lcd import RFID_LCD
+from lcd import lcd_display
 from parking_logic import *
 
 rfid_bp = Blueprint('rfid', __name__)
-display_lcd = RFID_LCD()
 
-def reset_lcd_to_default():
+def bg_entry_update(scanned_uid):
     try:
-        zone_ref = db.reference('Parking_Zone')
-        zone_data = zone_ref.get()
-        total_available = zone_data.get('Total_Available_Parking', 0) if zone_data else 0
-        display_lcd.show_default(total_available)
+        card_ref = db.reference(f"Card/{scanned_uid}")
+        current_time = datetime.now().strftime("%Y-%m-%d:%H:%M:%S")
+        card_ref.update({
+            'is_Entry': True,
+            'Last_Entry_Time': current_time 
+        })
     except Exception as e:
-        print(f"Error resetting LCD: {e}")
+        print(e)
+
+def bg_exit_update(scanned_uid, entry_time, exit_time, calculated_fee, new_balance):
+    try:
+        card_ref = db.reference(f"Card/{scanned_uid}")
+        card_ref.update({
+            'is_Entry': False,
+            'Balance': new_balance 
+        })
+            
+        add_new_parking_history(
+            scanned_uid=scanned_uid, 
+            entry_time=entry_time,
+            exit_time=exit_time,
+            calculated_fee=calculated_fee
+        )
+    
+    except Exception as e:
+        print(e)
 
 @rfid_bp.route('/rfid_entry', methods=['POST'])
 def rfid_entry():
@@ -30,32 +49,21 @@ def rfid_entry():
 
     card_ref = db.reference(f'Card/{scanned_uid}')
     card_data = card_ref.get()
-    zone_ref = db.reference('Parking_Zone')
-    zone_data = zone_ref.get()
-    total_available = zone_data.get('Total_Available_Parking', 0) if zone_data else 0
 
-    is_Valid, message = rfid_validate_entry(card_data, total_available)
+    is_Valid, message = rfid_validate_entry(card_data)
     balance = float(card_data.get('Balance', 0.0)) if card_data else 0.0
 
-    if is_Valid:
-        display_lcd.show_success(balance, True, get_user_name(card_data))
-        current_time = datetime.now().strftime("%Y-%m-%d:%H:%M:%S") 
-
-        card_ref.update({
-            'is_Entry': True,
-            'Last_Entry_Time': current_time 
-        })
-        
-        zone_ref.update({
-            'Total_Available_Parking': total_available - 1
-        })
+    if is_Valid:        
+        threading.Thread(
+            target=bg_entry_update,
+            args=(scanned_uid,),
+            daemon=True
+        ).start()
         
         print("Result: APPROVED - Gate Opening")
+        lcd_display.show_success(balance, True, get_user_name(card_data))
     else:
-        display_lcd.show_denied(message)
-    
-    # Start a background timer to reset the LCD to default after 3 seconds
-    threading.Timer(3.0, reset_lcd_to_default).start()
+        lcd_display.show_denied(message)
 
     return jsonify({"status": message}), 200
 
@@ -72,46 +80,29 @@ def rfid_exit():
 
     card_ref = db.reference(f'Card/{scanned_uid}')
     card_data = card_ref.get()
-    zone_ref = db.reference('Parking_Zone')
-    zone_data = zone_ref.get()
 
     isValid, message = rfid_validate_exit(card_data)
     
     if isValid:
-        card_ref.update({
-            'is_Entry': False
-        })
-
         entry_time = card_data.get('Last_Entry_Time', 0)
         exit_time = datetime.now().strftime("%Y-%m-%d:%H:%M:%S")
         calculated_fee = calculate_parking_fee(entry_time, exit_time)
-
+        
         # deduct the balance
         current_balance = float(card_data.get('Balance', 0.0)) if card_data else 0.0
         new_balance = current_balance - calculated_fee
-        card_ref.update({'Balance': new_balance})
         
-        add_new_parking_history(
-            scanned_uid=scanned_uid, 
-            entry_time=entry_time,
-            exit_time=exit_time,
-            calculated_fee=calculated_fee
-        )
+        threading.Thread(
+            target=bg_exit_update,
+            args=(scanned_uid,entry_time,exit_time,calculated_fee, new_balance),
+            daemon=True
+        ).start()
 
-        # Fixed: Pass the newly calculated balance and capitalized False
-        display_lcd.show_success(new_balance, False, get_user_name(card_data))
-        
-        total_available = zone_data.get('Total_Available_Parking', 0) if zone_data else 0
-        zone_ref.update({
-            'Total_Available_Parking': total_available + 1
-        })
+        lcd_display.show_success(new_balance, False, get_user_name(card_data))
         
         print("Result: APPROVED - Gate Opening")
         
     else:
-        display_lcd.show_denied(message)
-
-    # Start a background timer to reset the LCD to default after 3 seconds
-    threading.Timer(3.0, reset_lcd_to_default).start()
+        lcd_display.show_denied(message)
 
     return jsonify({"status": message}), 200

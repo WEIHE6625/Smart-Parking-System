@@ -4,41 +4,218 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Parking - Register</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 50px; }
-        .container { max-width: 400px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        button:hover { background-color: #218838; }
-        .error { color: red; text-align: center; margin-bottom: 10px; }
+        .input-group .toggle-password {
+            left: auto; 
+            right: 15px; 
+            cursor: pointer; 
+            z-index: 10; 
+        }
+
+        .input-group .toggle-password:hover {
+            color: #1976d2;
+        }
+
+        #passwordInput {
+            padding-right: 45px;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f0f2f5 0%, #e0e5ec 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .register-container {
+            background: white;
+            width: 100%;
+            max-width: 450px;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .register-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .register-header i {
+            color: #1976d2; 
+            margin-bottom: 10px;
+        }
+
+        .register-header h2 {
+            color: #333;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            transition: color 0.3s;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fafafa;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            border-color: #1976d2;
+            background: white;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+        }
+
+        .input-group input:focus + i, 
+        .input-group input:not(:placeholder-shown) + i {
+            color: #1976d2;
+        }
+
+        .btn-register {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-top: 10px;
+        }
+
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(30, 60, 114, 0.3);
+        }
+
+        .error-box {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ffcdd2;
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .login-link {
+            display: block;
+            text-align: center;
+            margin-top: 25px;
+            font-size: 14px;
+            color: #666;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .login-link span {
+            color: #1976d2;
+            font-weight: 600;
+        }
+
+        .login-link:hover span {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>SPS Registration</h2>
+<div class="register-container">
+    <div class="register-header">
+        <i class="fas fa-id-badge fa-3x"></i>
+        <h2>SPS Registration</h2>
+        <p style="color: #666; font-size: 14px; margin-top: 5px;">Create your SmartPark account</p>
+    </div>
     
     {% if error %}
-        <div class="error">{{ error }}</div>
+        <div class="error-box">
+            <i class="fas fa-exclamation-circle" style="margin-right: 5px;"></i> {{ error }}
+        </div>
     {% endif %}
 
     <form action="/register" method="POST">
-        <label>Full Name:</label>
-        <input type="text" name="name" required>
+        
+        <div class="input-group">
+            <input type="text" name="name" placeholder="Full Name" required>
+            <i class="fas fa-user"></i>
+        </div>
 
-        <label>Email Address:</label>
-        <input type="email" name="email" required>
+        <div class="input-group">
+            <input type="email" name="email" placeholder="Email Address" required>
+            <i class="fas fa-envelope"></i>
+        </div>
 
-        <label>Password:</label>
-        <input type="password" name="password" required>
+        <div class="input-group">
+            <input type="password" id="passwordInput" name="password" placeholder="Password" required>
+            <i class="fas fa-lock"></i>
+            <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility()"></i>
+        </div>
 
-        <label>RFID Card ID (Printed on your card):</label>
-        <input type="text" name="card_id" placeholder="" required>
+        <div class="input-group">
+            <input type="text" name="card_id" placeholder="RFID Card ID (Printed on your card)" required>
+            <i class="fas fa-id-card"></i>
+        </div>
 
-        <button type="submit">Register & Link Card</button>
+        <button type="submit" class="btn-register">Register & Link Card</button>
     </form>
+    
+    <a href="{{ url_for('auth.login') }}" class="login-link">
+        Already have an account? <span>Login here</span>
+    </a>
 </div>
+
+<script>
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById("passwordInput");
+        const toggleIcon = document.querySelector(".toggle-password");
+
+        if (passwordInput.type === "password") {
+            // Show password
+            passwordInput.type = "text";
+            toggleIcon.classList.remove("fa-eye");
+            toggleIcon.classList.add("fa-eye-slash");
+        } else {
+            // Hide password
+            passwordInput.type = "password";
+            toggleIcon.classList.remove("fa-eye-slash");
+            toggleIcon.classList.add("fa-eye");
+        }
+    }
+</script>
 
 </body>
 </html>

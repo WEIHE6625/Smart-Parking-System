@@ -1,0 +1,428 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    background: #f0f2f5;
+    color : #333;
+    overflow-x: hidden;
+}
+
+.dashboard-header {
+    width: 100%;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    margin-bottom: 30px;
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-icon {
+    font-size: 2em; /* Same as fa-2x */
+}
+
+.header-title {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: 1px;
+}
+
+.header-status {
+    background: rgba(255,255,255,0.1);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.status-text {
+    color: #64ffda;
+}
+
+.leaderboard-section {
+    width: 100%; 
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.leaderboard-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.leaderboard-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid #eee; 
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+.leaderboard-item:last-child {
+    border-bottom: none;
+}
+
+.user-name {
+    font-weight: bold;
+    color: #333;
+    text-transform: capitalize;
+}
+
+.user-spent {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: 0 20px 20px 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.zone-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0; 
+}
+
+.slot-badge {
+    background-color: #e3f2fd;
+    color: #1976d2; 
+    padding: 6px 14px;
+    border-radius: 20px; 
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(25, 118, 210, 0.1);
+}
+
+.live-section {
+    min-width: 280px;
+}
+
+
+.chart-section {
+    width: 100%; 
+    background: white;
+    border-radius: 10px;
+    padding: 30px 20px; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+canvas {
+    max-width: 100%;
+}
+
+.canvas-wrapper {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative; /* Required by Chart.js for responsive sizing */
+    min-height: 350px;  /* Forces the chart to stay at least this tall on mobile */
+}
+
+
+
+.centered-chart {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centers items horizontally */
+    text-align: center;  /* Centers the text/title */
+}
+
+.status-high { color: #2e7d32; } 
+.status-med { color: #f57c00; } 
+.status-full { color: #c62828; } 
+
+#totalAvailable {
+    font-size: 48px; 
+    margin: 10px 0;
+}
+
+.status-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap; /* Allows stacking on mobile */
+    margin-bottom: 24px;
+    align-items: stretch; /* Forces all boxes to be the exact same height */
+}
+
+.card {
+    flex: 1; 
+    max-width: 220px;
+    min-width: 200px;
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; 
+    transition: all 0.3s ease; 
+}
+
+.zone-box {
+    flex: 2; 
+    min-width: 280px;
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+}
+
+.zone-box {
+    background: white;
+    border-radius: 10px;
+    padding: 16px;
+    flex:1;
+    min-width: 320px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+
+.slot-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Creates two equal-width columns */
+    gap: 15px; /* Space between the slots */
+}
+
+.slot {
+    margin: 0; /* Changed from "10px 0" because the grid gap handles spacing now */
+    padding: 20px 10px;
+    border: 3px dashed #bdbdbd; 
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+}
+
+.slot_occupied{
+    background: #ffebee;
+    border-color: #ef5350;
+    color: #c62828;
+}
+
+.slot_empty{
+    background: #e8f5e9;
+    border-color: #66bb6a;
+    color: #2e7d32;
+}
+
+.distance_badge{
+    margin-top:8px;
+    font-size: 11px;
+    background: rgb(0,0,0,0.05);
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.empty { background: #4caf50; }
+.occupied { background: #f44336; }
+
+.small {
+    font-size: 12px;
+    font-weight: normal;
+    background: rgba(0,0,0,0.2);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.illegal-item {
+    margin: 10px 0;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.illegal-clear { background: #e0e0e0; color: #333; }
+.illegal-detected { background: #ff9800; color: white; animation: blink 1s infinite alternate; }
+
+@keyframes blink {
+    from { opacity: 1; }
+    to { opacity: 0.7; }
+}
+
+/* Modal Background Overlay */
+.modal-overlay {
+    display: none; 
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Modal Box */
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    max-width: 400px;
+    width: 90%;
+    animation: slideIn 0.3s ease-out;
+}
+
+.modal-content h2 {
+    color: #c62828;
+    margin-top: 0;
+}
+
+.card, .zone-box, .chart-section, .leaderboard-section {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #e0e0e0; /* Subtle border */
+}
+
+.card:hover, .zone-box:hover, .chart-section:hover, .leaderboard-section:hover {
+    transform: translateY(-5px); /* Moves it up slightly */
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12); /* Casts a bigger shadow */
+}
+
+.close-btn {
+    margin-top: 20px;
+    background: #c62828;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.close-btn:hover {
+    background: #b71c1c;
+}
+
+/* Class to show the modal */
+.modal-overlay.show {
+    display: flex;
+}
+
+@keyframes pulseUpdate {
+    0% { transform: scale(1); color: #1976d2; }
+    50% { transform: scale(1.2); color: #4caf50; }
+    100% { transform: scale(1); }
+}
+
+.pulse {
+    animation: pulseUpdate 0.4s ease-out;
+}
+
+#illegalStatusContainer {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    background: white;
+    border-left: 6px solid #ff9800; /* Orange accent */
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 20px;
+    width: 320px;
+    animation: slideInRight 0.4s ease-out;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.zone-illegal {
+    background-color: #fff3e0 !important; /* Light orange background */
+    border: 2px solid #ff9800 !important; /* Orange border */
+    box-shadow: 0 0 15px rgba(255, 152, 0, 0.4) !important;
+    animation: pulseOrange 1.5s infinite alternate;
+}
+
+@keyframes pulseOrange {
+    from { box-shadow: 0 0 5px rgba(255, 152, 0, 0.3); }
+    to { box-shadow: 0 0 20px rgba(255, 152, 0, 0.6); }
+}
+
+
+@media (max-width: 768px) {
+
+    .dashboard-header {
+        flex-direction: column; /* Stacks the status below the title */
+        padding: 15px;
+        gap: 15px; /* Adds breathing room between the title and status */
+        text-align: center;
+    }
+
+    .header-brand {
+        justify-content: center; /* Centers the icon and title */
+        gap: 10px;
+    }
+
+    .header-icon {
+        font-size: 1.5em; /* Shrinks the car icon */
+    }
+
+    .header-title {
+        font-size: 18px; /* Shrinks the title text to prevent overflow */
+    }
+
+    .header-status {
+        font-size: 12px; /* Makes the status pill slightly smaller */
+        padding: 6px 14px;
+    }
+    
+
+    .card {
+        max-width: none; 
+        width: 100%;     
+    }
+
+    .status-row {
+        flex-direction: column
+    }
+}
