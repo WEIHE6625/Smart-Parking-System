@@ -4,6 +4,7 @@ import json
 import ssl
 import threading
 import paho.mqtt.client as mqtt
+import paho.mqtt.publish as mqtt_publish
 from paho.mqtt.enums import CallbackAPIVersion
 
 from datetime import datetime
@@ -121,14 +122,21 @@ def add_new_parking_history(scanned_uid, entry_time, exit_time, calculated_fee):
 
     db.reference(f'Parking_History/{new_session_id}').set(new_record)
 
-    global mqtt_client
-    if mqtt_client is not None:
-        try:
-            # Send a simple ping to tell the dashboard to refresh
-            mqtt_client.publish("parking/financial_update", '{"update": true}', retain=False)
-            print("Financial update broadcasted to MQTT", flush=True)
-        except Exception as e:
-            print(f"MQTT Financial Broadcast error: {e}", flush=True)
+    try:
+        tls_config = {'tls_version': ssl.PROTOCOL_TLS}
+        auth_config = {'username': MQTT_USER, 'password': MQTT_PW}
+        
+        mqtt_publish.single(
+            topic="parking/financial_update", 
+            payload='{"update": true}', 
+            hostname=MQTT_BROKER, 
+            port=MQTT_PORT, 
+            auth=auth_config,
+            tls=tls_config
+        )
+        print("Financial update FORCE broadcasted to MQTT", flush=True)
+    except Exception as e:
+        print(f"MQTT Financial Broadcast error: {e}", flush=True)
 
 def get_user_name(card_data):
     user_id = card_data.get('User_ID') if card_data else None
