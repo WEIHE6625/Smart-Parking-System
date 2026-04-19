@@ -18,6 +18,21 @@ app.register_blueprint(rfid_bp)
 def home():
     return redirect(url_for('auth.login'))
 
+@app.route('/dashboard')
+def dashboard():
+    # Check if user is logged in
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    # Check if user is admin
+    if session.get('role') != 'admin':
+        return redirect(url_for('auth.login'))
+    
+    return render_template(
+        'dashboard.html',
+        parking_state=parking_state
+    )
+
 @app.route('/topup', methods=['GET', 'POST'])
 def topup():
     # If the user is not logged in, redirect them to the login page
