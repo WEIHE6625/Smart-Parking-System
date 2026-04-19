@@ -121,6 +121,15 @@ def add_new_parking_history(scanned_uid, entry_time, exit_time, calculated_fee):
 
     db.reference(f'Parking_History/{new_session_id}').set(new_record)
 
+    global mqtt_client
+    if mqtt_client is not None:
+        try:
+            # Send a simple ping to tell the dashboard to refresh
+            mqtt_client.publish("parking/financial_update", '{"update": true}', retain=False)
+            print("Financial update broadcasted to MQTT", flush=True)
+        except Exception as e:
+            print(f"MQTT Financial Broadcast error: {e}", flush=True)
+
 def get_user_name(card_data):
     user_id = card_data.get('User_ID') if card_data else None
     if user_id:

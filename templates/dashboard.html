@@ -198,6 +198,12 @@
             console.log("RAW MQTT EVENT:", message.destinationName, message.payloadString);
 
             // Handle barrier status messages on a separate topic
+            if (message.destinationName === "parking/financial_update") {
+                console.log("New transaction detected! Refreshing charts and leaderboard in background...");
+                fetchDashboardData(); 
+                return;
+            }
+            
             if (message.destinationName === "parking/Zone_A/barrier/status") {
                 try {
                     const d = JSON.parse(message.payloadString);
@@ -331,6 +337,7 @@
                     document.getElementById("liveStatus").style.color = "#4caf50";
                     client.subscribe(MQTT_TOPIC);
                     client.subscribe("parking/Zone_A/barrier/status");
+                    client.subscribe("parking/financial_update");
                 },
                 onFailure: function (error) {
                     console.log("Connection failed", error);
